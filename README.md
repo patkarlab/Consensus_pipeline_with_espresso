@@ -32,4 +32,4 @@ The github repo for espresso : https://github.com/abelson-lab/Espresso
 
 ## 5. Annotation of variants
 The .vcf file is separated as per the samples and annotated using ANNOVAR.  
-The annotated csv files are converted to excel files.
+The annotated csv files are converted to excel files.  
