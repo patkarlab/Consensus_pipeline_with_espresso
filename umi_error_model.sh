@@ -58,20 +58,20 @@ export R_LIBS="/usr/lib/R/library:$R_LIBS"
 #awk 'BEGIN{OFS="\t"}{print $1,$2,$3}' ${bedfile} > mrd_bed_ranges.bed
 Rscript espresso_model.R
 
-#source activate new_base
-#perl /home/programs/annovar_latest/annovar/convert2annovar.pl -format vcf4 espresso_calls.vcf --outfile espresso.avinput --withzyg --includeinfo -allsample
+source activate new_base
+perl /home/programs/annovar_latest/annovar/convert2annovar.pl -format vcf4 espresso_calls.vcf --outfile espresso.avinput --withzyg --includeinfo -allsample
 
-#for i in `cat ${samplesheet}`
-#do
-#	perl /home/programs/annovar_latest/annovar/table_annovar.pl "espresso.avinput."$i".avinput" --out $i --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all --operation g,r,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 /home/programs/annovar_latest/annovar/humandb/ --xreffile /home/programs/annovar_latest/annovar/example/gene_fullxref.txt
+for i in `cat ${samplesheet}`
+do
+	perl /home/programs/annovar_latest/annovar/table_annovar.pl "espresso.avinput."$i".avinput" --out $i --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all --operation g,r,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 /home/programs/annovar_latest/annovar/humandb/ --xreffile /home/programs/annovar_latest/annovar/example/gene_fullxref.txt
 
-#	python espresso_anno_format.py $i".hg19_multianno.csv" $i ${PWD}/
+	python espresso_anno_format.py $i".hg19_multianno.csv" $i ${PWD}/
 
-#	cut -d',' -f1-28,47 $i"_espresso.csv" > $i"_final_anno.csv"
-#done
+	cut -d',' -f1-28,47 $i"_espresso.csv" > $i"_final_anno.csv"
+done
 
 ## MERGED EXCEL GENERATION
-#for i in `cat ${samplesheet}`
-#do
-#	python3 merge-csv_v3.py $i ./ $i.xlsx
-#done
+for i in `cat ${samplesheet}`
+do
+	python3 merge-csv_v3.py $i ./ $i.xlsx
+done
