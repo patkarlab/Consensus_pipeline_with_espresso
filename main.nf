@@ -519,7 +519,7 @@ workflow MRD {
 		////lofreq_uncoll(MapBam.out)
 		//varscan_uncoll(sam_conversion.out)
 
-		////somaticSeq_run(mutect2_run.out.join(varscan.out.join(ABRA2_realign.out)))
+		//somaticSeq_run(mutect2_run.out.join(varscan.out.join(ABRA2_realign.out)))
 		//somaticSeq_run(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out))))
 		//somaticSeq_run_uncoll(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out))))
 }
