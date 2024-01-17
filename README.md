@@ -22,7 +22,7 @@ This script counts the total no. of reads in the input bam file. The number of k
 The fastq_bam.sh script converts the fastq file obtained from the PosControlCount.sh to bam file. This bam file is then integrated in the sample's bam file.  
 
 
-## 4. Espresso for error corrected variant detection
+## 3. Espresso for error corrected variant detection
 The .cns files obtained from VarScan are provided as input to Espresso.  The output from Espresso is a single vcf file for all the samples.  
 The detailed espresso workflow is present here : https://htmlpreview.github.io/?https://github.com/abelson-lab/Espresso/blob/master/vignettes/Espresso_workflow.html  
 The github repo for espresso : https://github.com/abelson-lab/Espresso  
