@@ -1,0 +1,5 @@
+# This command was used to obtain unique probes for the bed file updated on 22nd Dec23
+awk 'BEGIN{FS="[\t;]"}{print $1,$2,$3,toupper($6)}' Probes-XGEN_npm1_cebpa_phf6_updated.bed | sed 's/_//g' | sort -k1,1V -k2,2n -k3,3n -k4,4 | uniq | awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' > Probes-XGEN_npm1_cebpa_phf6_updated_uniq.bed
+
+# This command provides the duplicated probes of the bed file updated on 22nd Dec23
+awk 'BEGIN{FS="[\t;]"}{print $1,$2,$3,toupper($6)}' Probes-XGEN_npm1_cebpa_phf6_updated.bed | sed 's/_//g' | sort -k1,1V -k2,2n -k3,3n -k4,4 | uniq -d | awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' > Probes-XGEN_npm1_cebpa_phf6_updated_dup.bed
