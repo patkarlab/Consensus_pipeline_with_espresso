@@ -496,8 +496,8 @@ workflow MRD {
 		FilterConsBam(CallMolecularConsensusReads.out) 
 		SyntheticFastq(FilterConsBam.out)
 		ABRA2_realign(SyntheticFastq.out)
-		//CNS_filegen(ABRA2_realign.out)
-		//espresso(CNS_filegen.out.collect())
+		CNS_filegen(ABRA2_realign.out)
+		espresso(CNS_filegen.out.collect())
 
 		trimming_trimmomatic(samples_ch) | pair_assembly_pear | mapping_reads | sam_conversion
 
@@ -506,22 +506,22 @@ workflow MRD {
 
 		hsmetrics_run(ABRA2_realign.out)
 		hsmetrics_run_uncoll(sam_conversion.out)
-		//minimap_getitd(ABRA2_realign.out)
+		minimap_getitd(ABRA2_realign.out)
 
-		//mutect2_run(ABRA2_realign.out)
-		//vardict(ABRA2_realign.out)
-		////lofreq(ABRA2_realign.out)
-		//varscan(ABRA2_realign.out)
-		////strelka(ABRA2_realign.out)	
+		mutect2_run(ABRA2_realign.out)
+		vardict(ABRA2_realign.out)
+		//lofreq(ABRA2_realign.out)
+		varscan(ABRA2_realign.out)
+		//strelka(ABRA2_realign.out)	
 
-		//mutect2_run_uncoll(sam_conversion.out)
-		//vardict_uncoll(sam_conversion.out)
-		////lofreq_uncoll(MapBam.out)
-		//varscan_uncoll(sam_conversion.out)
+		mutect2_run_uncoll(sam_conversion.out)
+		vardict_uncoll(sam_conversion.out)
+		//lofreq_uncoll(MapBam.out)
+		varscan_uncoll(sam_conversion.out)
 
 		//somaticSeq_run(mutect2_run.out.join(varscan.out.join(ABRA2_realign.out)))
-		//somaticSeq_run(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out))))
-		//somaticSeq_run_uncoll(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out))))
+		somaticSeq_run(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out))))
+		somaticSeq_run_uncoll(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out))))
 }
 
 workflow.onComplete {
