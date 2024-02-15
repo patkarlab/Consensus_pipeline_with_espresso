@@ -11,7 +11,7 @@
 
 source activate new_base
 nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/nextflow.config run main.nf -entry MRD \
---bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/Probes-XGEN_npm1_cebpa_phf6_sortd \
+--bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/Probes-XGEN_24jan24_sortd \
 --bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/AML_MRD_Exons_sortd \
 --sequences /home/pipelines/Consensus_pipeline_with_espresso/sequences/ \
 --input /home/pipelines/Consensus_pipeline_with_espresso/samplesheet.csv \
