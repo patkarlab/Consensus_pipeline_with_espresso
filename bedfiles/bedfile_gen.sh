@@ -3,8 +3,8 @@
 # The input is bedfile without the extension
 bedfile=$1
 
-awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' ${bedfile}.bed > ${bedfile}_form.bed
-bedtools sort -i ${bedfile}_form.bed > ${bedfile}_sortd.bed
+#awk 'BEGIN{OFS="\t"}{print $1,$2,$3,$4}' ${bedfile}.bed > ${bedfile}_form.bed
+#bedtools sort -i ${bedfile}_form.bed > ${bedfile}_sortd.bed
 bgzip -c ${bedfile}_sortd.bed > ${bedfile}_sortd.bed.gz
 tabix -p bed ${bedfile}_sortd.bed.gz
 awk 'BEGIN{FS="\t";OFS=""}{print $1,":",$2,"-",$3}' ${bedfile}_sortd.bed > ${bedfile}_sortd_regions.txt   # For Platypus
