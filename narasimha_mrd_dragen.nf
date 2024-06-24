@@ -112,7 +112,7 @@ process mutect2_run {
 		tuple val (Sample), file ("*.mutect2.vcf")
 	script:
 	"""
-	${params.java_path}/java -Xmx10G -jar ${params.GATK38_path} -T MuTect2 -R ${params.genome} -I:tumor ${abra_bam} -o ${Sample}.mutect2.vcf --dbsnp ${params.site2} -L ${params.bedfile}.bed -nct 25 -mbq 20
+	${params.java_path}/java -Xmx10G -jar ${params.GATK38_path} -T MuTect2 -R ${params.genome} -I:tumor ${abra_bam} -o ${Sample}.mutect2.vcf --dbsnp ${params.site2} -L ${params.bedfile}.bed -nct 25 -mbq 20 --allow_potentially_misencoded_quality_scores
 	#${params.samtools} view -bs 40.1 ${abra_bam} > subsampled_01.bam
 	#${params.samtools} index subsampled_01.bam
 	#${params.mutect2} ${params.java_path} ${params.GATK38_path} ${params.genome} subsampled_01.bam ${Sample}.mutect2.vcf ${params.site2} ${params.bedfile}.bed
