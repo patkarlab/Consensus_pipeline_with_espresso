@@ -30,10 +30,10 @@ with open (infile) as input:
 			plt.figure (figsize=(6, 5))
 			title = lines[-3] + '\n' + str(chrom) + ':' + str(start) + '-' + str(end)
 			plt.title(title)
-			plt.scatter(location, coverage_val, s=10)
-			plt.ylim (0, 5)
+			#plt.scatter(location, coverage_val, s=10)
+			plt.ylim (0, 8)
 			plt.ylabel('(log10)')
-			plt.plot (location, coverage_val)
+			plt.plot (location, coverage_val, marker='o', markersize=10)
 			pdf.savefig()
 			plt.close()
 			location = []

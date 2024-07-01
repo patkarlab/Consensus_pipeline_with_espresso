@@ -129,7 +129,7 @@ process CallMolecularConsensusReads {
 	script:
 	"""
 	# This step generates unmapped consensus reads from the grouped reads and immediately filters them
-	java -Xmx10g -jar ${params.fgbio_path} --compression 0 CallMolecularConsensusReads --input ${grouped_bam} --output /dev/stdout --min-reads 4 --threads 4 | java -Xmx4g -jar ${params.fgbio_path} --compression 1 FilterConsensusReads --input /dev/stdin --output ${Sample}.cons.unmapped.bam --ref ${params.genome} --min-reads 4 --min-base-quality 20 --max-base-error-rate 0.25
+	java -Xmx25g -jar ${params.fgbio_path} --compression 0 CallMolecularConsensusReads --input ${grouped_bam} --output /dev/stdout --min-reads 4 --threads 4 | java -Xmx4g -jar ${params.fgbio_path} --compression 1 FilterConsensusReads --input /dev/stdin --output ${Sample}.cons.unmapped.bam --ref ${params.genome} --min-reads 4 --min-base-quality 20 --max-base-error-rate 0.25
 	#java -Xmx4g -jar ${params.fgbio_path} --compression 0 CallMolecularConsensusReads --input ${grouped_bam} --output /dev/stdout --min-reads 2 --min-input-base-quality 20 --threads 4 | java -Xmx4g -jar ${params.fgbio_path} --compression 1 FilterConsensusReads --input /dev/stdin --output ${Sample}.cons.unmapped.bam --ref ${params.genome} --min-reads 2 --min-base-quality 20 --max-base-error-rate 0.35
 	#java -Xmx4g -jar /home/programs/fgbio/fgbio-2.0.1.jar --compression 1 CallMolecularConsensusReads --input NPM1-078.grouped.bam --output /dev/stdout --min-reads 2 --min-input-base-quality 20 --error-rate-post-umi=30 --threads 30 | java -Xmx4g -jar /home/programs/fgbio/fgbio-2.0.1.jar --compression 1 FilterConsensusReads --input /dev/stdin --output NPM1-078.cons.unmapped.bam --ref /home/reference_genomes/hg19_broad/hg19_all.fasta --min-reads 2 --min-base-quality 20 --max-base-error-rate 0.2
 	#java -Xmx4g -jar /home/programs/fgbio/fgbio-2.0.1.jar --compression 0 CallMolecularConsensusReads --input NPM1-078.grouped.bam --output /dev/stdout --min-reads 2 --min-input-base-quality 20 --threads 10 | java -Xmx4g -jar /home/programs/fgbio/fgbio-2.0.1.jar --compression 0 FilterConsensusReads --input /dev/stdin --output NPM1-078.cons.unmapped.bam --ref /home/reference_genomes/hg19_broad/hg19_all.fasta --min-reads 2 --min-base-quality 20 
@@ -609,7 +609,7 @@ workflow NARASIMHA_MRD {
 		//SyntheticFastq(FilterConsBam.out)
 		ABRA2_realign(FilterConsBam.out)
 		CNS_filegen(ABRA2_realign.out)
-		//espresso(CNS_filegen.out.collect())
+		espresso(CNS_filegen.out.collect())
 
 		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
 
