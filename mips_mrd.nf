@@ -562,7 +562,7 @@ workflow NARASIMHA_MRD {
 		//SyntheticFastq(FilterConsBam.out)
 		ABRA2_realign(FilterConsBam.out)
 		CNS_filegen(ABRA2_realign.out)
-		espresso(CNS_filegen.out.collect())
+		//espresso(CNS_filegen.out.collect())
 
 		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
 
