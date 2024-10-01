@@ -21,6 +21,18 @@ process trimming {
 	"""
 }
 
+process fastqc{
+	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*'
+	input:
+		val Sample
+	output:
+		path "*"
+	"""
+	${params.fastqc} -o ./ -f fastq ${params.sequences}/${Sample}_*R1_*.fastq.gz ${params.sequences}/${Sample}_*R2_*.fastq.gz
+	"""
+}
+
+
 process FastqToBam {
 	input:
 		tuple val (Sample), file(R1_trim_fastq), file(R2_trim_fastq)
@@ -519,7 +531,7 @@ workflow MRD {
 		//SyntheticFastq(FilterConsBam.out)
 		ABRA2_realign(FilterConsBam.out)
 		CNS_filegen(ABRA2_realign.out)
-		espresso(CNS_filegen.out.collect())
+		//espresso(CNS_filegen.out.collect())
 
 		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
 
@@ -554,6 +566,51 @@ workflow NARASIMHA_MRD {
 
 	main:
 		trimming(samples_ch)
+		fastqc(samples_ch)
+		FastqToBam_NARASIMHA(trimming.out) 
+		MapBam(FastqToBam_NARASIMHA.out) 
+		GroupReadsByUmi(MapBam.out) 
+		CallMolecularConsensusReads(GroupReadsByUmi.out) 
+		FilterConsBam(CallMolecularConsensusReads.out) 
+		SyntheticFastq(FilterConsBam.out)
+		ABRA2_realign(FilterConsBam.out)
+		CNS_filegen(ABRA2_realign.out)
+		//espresso(CNS_filegen.out.collect())
+
+		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
+
+		coverage_mosdepth(ABRA2_realign.out)
+		coverage_mosdepth_uncoll(sam_conversion.out)
+
+		hsmetrics_run(ABRA2_realign.out)
+		hsmetrics_run_uncoll(sam_conversion.out)
+		minimap_getitd(sam_conversion.out)
+
+		mutect2_run(ABRA2_realign.out)
+		vardict(ABRA2_realign.out)
+		//lofreq(ABRA2_realign.out)
+		varscan(ABRA2_realign.out)
+		//strelka(ABRA2_realign.out)
+
+		mutect2_run_uncoll(sam_conversion.out)
+		vardict_uncoll(sam_conversion.out)
+		//lofreq_uncoll(MapBam.out)
+		varscan_uncoll(sam_conversion.out)
+
+		somaticSeq_run(coverage_mosdepth.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
+		somaticSeq_run_uncoll(coverage_mosdepth_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
+}
+
+workflow NARASIMHA_MRD_VALIDATION {
+	Channel
+		.fromPath(params.input)
+		.splitCsv(header:false)
+		.flatten()
+		.set { samples_ch }
+
+	main:
+		trimming(samples_ch)
+		fastqc(samples_ch)
 		FastqToBam_NARASIMHA(trimming.out) 
 		MapBam(FastqToBam_NARASIMHA.out) 
 		GroupReadsByUmi(MapBam.out) 

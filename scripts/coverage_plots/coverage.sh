@@ -1,5 +1,10 @@
 #!/usr/bin/bash
 
-/usr/bin/bedtools bamtobed -i 24NGS631-NV2-AMLMRD.uncollaps.bam > 24NGS631-NV2-AMLMRD.bed
-/usr/bin/bedtools coverage -d -a /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/AML_MRD_060624_sortd.bed -b 24NGS631-NV2-AMLMRD.bed > 24NGS631-NV2-AMLMRD.uniform.bed
-./coverage_plot.py 24NGS631-NV2-AMLMRD.uniform.bed temp.pdf
+bamfile=$1
+bedfile=$2
+outdir=$3
+
+/usr/bin/bedtools bamtobed -i ${bamfile} > ${outdir}/temp.bed
+/usr/bin/bedtools coverage -d -a ${bedfile} -b ${outdir}/temp.bed > ${outdir}/temp.uniform.bed
+/home/pipelines/Consensus_pipeline_with_espresso/scripts/coverage_plots/coverage_plot.py ${outdir}/temp.uniform.bed ${outdir}/coverage_plot.pdf
+rm ${outdir}/temp.bed ${outdir}/temp.uniform.bed
