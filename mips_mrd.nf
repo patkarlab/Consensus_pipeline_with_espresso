@@ -13,10 +13,17 @@ process trimming {
 	input:
 		val (Sample)
 	output:
-		tuple val (Sample), file("${Sample}.R1.trimmed.fastq"), file("${Sample}.R2.trimmed.fastq")
+		//tuple val (Sample), file("${Sample}.R1.trimmed.fastq"), file("${Sample}.R2.trimmed.fastq")
+		tuple val (Sample), file("*1P.fq.gz"), file("*2P.fq.gz")
 	script:
 	"""	
-	/home/programs/ea-utils/clipper/fastq-mcf -o ${Sample}.R1.trimmed.fastq -o ${Sample}.R2.trimmed.fastq -l 53 -k 0 -q 0 /home/diagnostics/pipelines/smMIPS_pipeline/code/functions/preprocess_reads_miseq/smmip_adaptors.fa ${params.sequences}/${Sample}_S*_R1_*.fastq.gz  ${params.sequences}/${Sample}_S*_R2_*.fastq.gz
+	#/home/programs/ea-utils/clipper/fastq-mcf -o ${Sample}.R1.trimmed.fastq -o ${Sample}.R2.trimmed.fastq -l 53 -k 0 -q 0 /home/diagnostics/pipelines/smMIPS_pipeline/code/functions/preprocess_reads_miseq/smmip_adaptors.fa ${params.sequences}/${Sample}_S*_R1_*.fastq.gz  ${params.sequences}/${Sample}_S*_R2_*.fastq.gz
+	trimmomatic PE \
+	${params.sequences}/${Sample}_*R1_*.fastq.gz ${params.sequences}/${Sample}_*R2_*.fastq.gz \
+	-baseout ${Sample}.fq.gz \
+	ILLUMINACLIP:${params.adaptors}:2:30:10:2:keepBothReads \
+	ILLUMINACLIP:${params.nextera_adapters}:2:30:10:2:keepBothReads \
+	LEADING:3 SLIDINGWINDOW:4:15 MINLEN:40	
 	sleep 5s
 	"""
 }
@@ -31,7 +38,6 @@ process fastqc{
 	${params.fastqc} -o ./ -f fastq ${params.sequences}/${Sample}_*R1_*.fastq.gz ${params.sequences}/${Sample}_*R2_*.fastq.gz
 	"""
 }
-
 
 process FastqToBam {
 	input:
@@ -575,7 +581,7 @@ workflow NARASIMHA_MRD {
 		SyntheticFastq(FilterConsBam.out)
 		ABRA2_realign(FilterConsBam.out)
 		CNS_filegen(ABRA2_realign.out)
-		//espresso(CNS_filegen.out.collect())
+		espresso(CNS_filegen.out.collect())
 
 		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
 
