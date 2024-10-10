@@ -167,6 +167,29 @@ process FilterConsBam {
 	"""
 }
 
+process RealignerTargetCreator {
+	input:
+		tuple val (Sample), file (bamFile), file(bamBai)
+	output:
+		tuple val(Sample), file ("*.intervals")
+	script:
+	"""
+	${params.java_path}/java -Xmx8G -jar ${params.GATK38_path} -T RealignerTargetCreator -R ${params.genome} -nt 10 -I ${bamFile} --known ${params.site1} -o ${Sample}.intervals
+	"""
+}
+
+process IndelRealigner{
+	input:
+		tuple val(Sample), file(bamFile), file(bamBai)
+	output:
+		tuple val(Sample), file ("*.realigned.bam")
+	script:
+	"""
+	${params.java_path}/java -Xmx8G -jar ${params.GATK38_path} -T RealignerTargetCreator -R ${params.genome} -nt 10 -I ${bamFile} --known ${params.site1} -o ${Sample}.intervals
+	${params.java_path}/java -Xmx8G -jar ${params.GATK38_path} -T IndelRealigner -R ${params.genome} -I ${bamFile} -known ${params.site1} --targetIntervals ${Sample}.intervals -o ${Sample}.realigned.bam
+	"""
+}
+
 process SyntheticFastq {
 	input:
 		tuple val (Sample), file (cons_filt_bam)
@@ -578,7 +601,8 @@ workflow NARASIMHA_MRD {
 		GroupReadsByUmi(MapBam.out) 
 		CallMolecularConsensusReads(GroupReadsByUmi.out) 
 		FilterConsBam(CallMolecularConsensusReads.out) 
-		SyntheticFastq(FilterConsBam.out)
+		IndelRealigner(FilterConsBam.out)
+		SyntheticFastq(IndelRealigner.out)
 		ABRA2_realign(FilterConsBam.out)
 		CNS_filegen(ABRA2_realign.out)
 		espresso(CNS_filegen.out.collect())
