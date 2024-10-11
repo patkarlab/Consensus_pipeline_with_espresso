@@ -603,7 +603,7 @@ workflow NARASIMHA_MRD {
 		FilterConsBam(CallMolecularConsensusReads.out) 
 		IndelRealigner(FilterConsBam.out)
 		SyntheticFastq(IndelRealigner.out)
-		ABRA2_realign(FilterConsBam.out)
+		ABRA2_realign(SyntheticFastq.out)
 		CNS_filegen(ABRA2_realign.out)
 		espresso(CNS_filegen.out.collect())
 
