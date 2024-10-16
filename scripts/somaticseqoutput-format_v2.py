@@ -8,7 +8,7 @@ filename = args[1]
 outfile = args[2]
 #vartools=['MuTect2 | ', 'VarScan2 | ', 'VarDict | ', 'LoFreq | ', 'Strelka | ', 'Freebayes | ', 'Platypus | ']
 #vartools=['MuTect2 | ', 'VarScan2 | ', 'VarDict | ', 'LoFreq | ']
-vartools=['MuTect2 | ', 'VarScan2 | ', 'VarDict | ']
+vartools=['VarScan2 | ', 'VarDict | ']
 
 df = pd.read_csv(filename)
 x = df['Otherinfo1']
