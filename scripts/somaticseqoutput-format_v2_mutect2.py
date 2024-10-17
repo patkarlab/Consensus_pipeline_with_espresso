@@ -31,11 +31,11 @@ for row in x:
     data['FILTER'].append(rowitems[9])
     #print (rowitems[9])
     info=rowitems[10].split(';')
-    formatval=rowitems[-2].split(':')
+    formatval=rowitems[-1].split(':')
     #print (rowitems[-2].split(':'))
-    #print (formatval)
+    print (formatval)
     readcounts=formatval[1]
-    #print (formatval[1])
+    print (formatval[1])
     if len(info)!=5 and info[0]!='SOMATIC':
         data['SOMATIC_FLAG'].append('NON SOMATIC')
         name_toolskey=0
