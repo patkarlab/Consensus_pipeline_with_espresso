@@ -19,8 +19,8 @@ df2 = pd.read_csv(coverage, sep='\t', header=None)
 coverage_sheet_name="coverage"
 df2.to_excel(writer,sheet_name=coverage_sheet_name, index=False, header=False)
 
-df3 = pd.read_csv(mutect2, sep='\t', header=None)
+df3 = pd.read_csv(mutect2)
 mutect2_sheet_name = "mutect2"
-df3.to_excel(writer,sheet_name=mutect2_sheet_name, index=False, header=False)
+df3.to_excel(writer,sheet_name=mutect2_sheet_name, index=False)
 
 writer.save()

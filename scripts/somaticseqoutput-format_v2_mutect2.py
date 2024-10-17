@@ -31,7 +31,7 @@ for row in x:
     data['FILTER'].append(rowitems[9])
     #print (rowitems[9])
     info=rowitems[10].split(';')
-    formatval=rowitems[-1].split(':')
+    formatval=rowitems[-2].split(':')
     #print (rowitems[-2].split(':'))
     #print (formatval)
     readcounts=formatval[1]
