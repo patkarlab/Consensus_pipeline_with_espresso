@@ -335,10 +335,7 @@ process mutect2_run {
 		tuple val (Sample), file ("mutect2_.csv")
 	script:
 	"""
-	${params.java_path}/java -Xmx10G -jar ${params.GATK38_path} -T MuTect2 -R ${params.genome} -I:tumor ${abra_bam} -o ${Sample}.mutect2.vcf --dbsnp ${params.site2} -L ${params.bedfile}.bed -nct 25 -mbq 20
-	#${params.samtools} view -bs 40.1 ${abra_bam} > subsampled_01.bam
-	#${params.samtools} index subsampled_01.bam
-	#${params.mutect2} ${params.java_path} ${params.GATK38_path} ${params.genome} subsampled_01.bam ${Sample}.mutect2.vcf ${params.site2} ${params.bedfile}.bed
+	${params.java_path}/java -Xmx10G -jar ${params.GATK42_path} Mutect2 -R ${params.genome} -I:tumor ${abra_bam} -O ${Sample}.mutect2.vcf -L ${params.bedfile}.bed -mbq 20
 	perl ${params.annovarLatest_path}/convert2annovar.pl -format vcf4 ${Sample}.mutect2.vcf --outfile ${Sample}.mutect2.avinput -allsample -withfreq --includeinfo
     perl ${params.annovarLatest_path}/table_annovar.pl ${Sample}.mutect2.avinput --out ${Sample}.mutect2.somaticseq --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all,clinvar_20170905 --operation g,r,f,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 ${params.annovarLatest_path}/humandb/ --xreffile ${params.annovarLatest_path}/example/gene_fullxref.txt
 
@@ -358,8 +355,7 @@ process mutect2_run_uncoll {
 		tuple val (Sample), file ("mutect2_.csv")
 	script:
 	"""
-	${params.java_path}/java -Xmx10G -jar ${params.GATK38_path} -T MuTect2 -R ${params.genome} -I:tumor ${abra_bam} -o ${Sample}.mutect2.vcf --dbsnp ${params.site2} -L ${params.bedfile}.bed -nct 25 -mbq 20
-	
+	${params.java_path}/java -Xmx10G -jar ${params.GATK42_path} Mutect2 -R ${params.genome} -I:tumor ${abra_bam} -O ${Sample}.mutect2.vcf -L ${params.bedfile}.bed -mbq 20
 	perl ${params.annovarLatest_path}/convert2annovar.pl -format vcf4 ${Sample}.mutect2.vcf --outfile ${Sample}.mutect2.avinput -allsample -withfreq --includeinfo
 	perl ${params.annovarLatest_path}/table_annovar.pl ${Sample}.mutect2.avinput --out ${Sample}.mutect2.somaticseq --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all,clinvar_20170905 --operation g,r,f,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 ${params.annovarLatest_path}/humandb/ --xreffile ${params.annovarLatest_path}/example/gene_fullxref.txt
 
