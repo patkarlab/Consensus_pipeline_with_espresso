@@ -16,11 +16,11 @@ process SyntheticFastq {
 	script:
 	"""
 	# Making a synthetic fastq and bam based on the number of reads in the sample bam file
-	${params.PosControlScript} ${params.sequences}/${Sample}.bam ${Sample}_inreads
+	${params.PosControlScript} ${params.sequences}/${Sample}_tumor.bam ${Sample}_inreads
 	${params.fastq_bam} ${Sample}_inreads		# This script will output a file named *_inreads.fxd_sorted.bam
 
 	# Merging the Sample bam file with positive control bam file
-	cp ${params.sequences}/${Sample}.bam ${Sample}.cons.filtered_merge.bam
+	cp ${params.sequences}/${Sample}_tumor.bam ${Sample}.cons.filtered_merge.bam
 	${params.samtools} merge -f ${Sample}.synreads.bam ${Sample}.cons.filtered_merge.bam ${Sample}_inreads.fxd_sorted.bam
 	${params.samtools} index ${Sample}.synreads.bam > ${Sample}.synreads.bam.bai
 	"""
@@ -109,13 +109,18 @@ process mutect2_run {
 	input:
 		tuple val (Sample), file(abra_bam), file (abra_bai)
 	output:
-		tuple val (Sample), file ("*.mutect2.vcf")
+		tuple val (Sample), file ("mutect2_.csv")
 	script:
 	"""
 	${params.java_path}/java -Xmx10G -jar ${params.GATK38_path} -T MuTect2 -R ${params.genome} -I:tumor ${abra_bam} -o ${Sample}.mutect2.vcf --dbsnp ${params.site2} -L ${params.bedfile}.bed -nct 25 -mbq 20 --allow_potentially_misencoded_quality_scores
-	#${params.samtools} view -bs 40.1 ${abra_bam} > subsampled_01.bam
-	#${params.samtools} index subsampled_01.bam
-	#${params.mutect2} ${params.java_path} ${params.GATK38_path} ${params.genome} subsampled_01.bam ${Sample}.mutect2.vcf ${params.site2} ${params.bedfile}.bed
+	perl ${params.annovarLatest_path}/convert2annovar.pl -format vcf4 ${Sample}.mutect2.vcf --outfile ${Sample}.mutect2.avinput -allsample -withfreq --includeinfo
+	perl ${params.annovarLatest_path}/table_annovar.pl ${Sample}.mutect2.avinput --out ${Sample}.mutect2.somaticseq --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all,clinvar_20170905 --operation g,r,f,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 ${params.annovarLatest_path}/humandb/ --xreffile ${params.annovarLatest_path}/example/gene_fullxref.txt
+
+	if [ -s ${Sample}.mutect2.somaticseq.hg19_multianno.csv ]; then
+		python3 ${PWD}/scripts/somaticseqoutput-format_v2_mutect2.py ${Sample}.mutect2.somaticseq.hg19_multianno.csv mutect2_.csv
+	else
+		touch mutect2_.csv
+	fi
 	"""
 }
 
@@ -199,12 +204,16 @@ process somaticSeq_run {
 		tuple val (Sample), file ("*")
 	script:
 	"""
-	${params.vcf_filter} ${mutectVcf} ${Sample}.mutect2_sort.vcf
+	#${params.vcf_filter} ${mutectVcf} ${Sample}.mutect2_sort.vcf
 	${params.vcf_filter} ${vardictVcf} ${Sample}.vardict_sort.vcf
 	${params.vcf_filter} ${varscanVcf} ${Sample}.varscan_sort.vcf
-	echo "inside the somaticSeq"
+	${params.vcf_filter} ${params.sequences}/${Sample}.hard-filtered.vcf ${Sample}.dragen.sorted.vcf
 	
-	somaticseq_parallel.py --output-directory ${Sample}.somaticseq --genome-reference ${params.genome} --inclusion-region ${params.bedfile}.bed --threads 25 --pass-threshold 0 --lowqual-threshold 0 --algorithm xgboost -minMQ 0 -minBQ 0 -mincaller 0 --dbsnp-vcf /home/reference_genomes/dbSNPGATK/dbsnp_138.hg19.somatic.vcf single --bam-file ${finalBam} --mutect2-vcf ${Sample}.mutect2_sort.vcf --vardict-vcf ${Sample}.vardict_sort.vcf --varscan-vcf ${Sample}.varscan_sort.vcf --sample-name ${Sample} 
+	python3 ${params.splitvcf_path} -infile ${Sample}.dragen.sorted.vcf -snv ${Sample}_dragen_cnvs.vcf -indel ${Sample}_dragen_indels.vcf
+	${params.vcf_filter} ${Sample}_dragen_cnvs.vcf ${Sample}_dragen_cnvs_sort.vcf
+	${params.vcf_filter} ${Sample}_dragen_indels.vcf ${Sample}_dragen_indels_sort.vcf
+
+	somaticseq_parallel.py --output-directory ${Sample}.somaticseq --genome-reference ${params.genome} --inclusion-region ${params.bedfile}.bed --threads 25 --pass-threshold 0 --lowqual-threshold 0 --algorithm xgboost -minMQ 0 -minBQ 0 -mincaller 0 --dbsnp-vcf /home/reference_genomes/dbSNPGATK/dbsnp_138.hg19.somatic.vcf single --bam-file ${finalBam} --vardict-vcf ${Sample}.vardict_sort.vcf --varscan-vcf ${Sample}.varscan_sort.vcf --sample-name ${Sample} --arbitrary-snvs ${Sample}_dragen_cnvs_sort.vcf --arbitrary-indels ${Sample}_dragen_indels_sort.vcf
 
 	${params.vcf_sorter_path} ${Sample}.somaticseq/Consensus.sSNV.vcf ${Sample}.somaticseq/somaticseq_snv.vcf
 	bgzip -c ${Sample}.somaticseq/somaticseq_snv.vcf > ${Sample}.somaticseq/somaticseq_snv.vcf.gz
@@ -216,17 +225,17 @@ process somaticSeq_run {
 
 	${params.bcftools_path} concat -a ${Sample}.somaticseq/somaticseq_snv.vcf.gz ${Sample}.somaticseq/somaticseq_indel.vcf.gz -o ${Sample}.ErrorCorrectd.vcf
 
-	sed -i 's/##INFO=<ID=MVD,Number=3,Type=Integer,Description="Calling decision of the 3 algorithms: MuTect, VarScan2, VarDict">/##INFO=<ID=MVD,Number=3,Type=String,Description="Calling decision of the 3 algorithms: MuTect, VarScan2, VarDict">/g' ${Sample}.ErrorCorrectd.vcf
-
+	sed -i 's/##INFO=<ID=VD0,Number=3,Type=Integer,Description="Calling decision of the 3 algorithms: VarScan2, VarDict, SnvCaller_0">/##INFO=<ID=VD0,Number=3,Type=Integer,Description="Calling decision of the 3 algorithms: VarScan2, VarDict, Dragen">/g' ${Sample}.ErrorCorrectd.vcf
+	sed -i 's/VD0/VDG/g' ${Sample}.ErrorCorrectd.vcf
 	perl ${params.annovarLatest_path}/convert2annovar.pl -format vcf4 ${Sample}.ErrorCorrectd.vcf --outfile ${Sample}.ErrorCorrectd.avinput -allsample -withfreq --includeinfo
 	perl ${params.annovarLatest_path}/table_annovar.pl ${Sample}.ErrorCorrectd.avinput --out ${Sample}.somaticseq --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all,clinvar_20170905 --operation g,r,f,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 ${params.annovarLatest_path}/humandb/ --xreffile ${params.annovarLatest_path}/example/gene_fullxref.txt
 
 	if [ -s ${Sample}.somaticseq.hg19_multianno.csv ]; then
-		python3 ${params.format_somaticseq_script} ${Sample}.somaticseq.hg19_multianno.csv ${Sample}.ErrorCorrectd.csv
+		python3 ${params.format_somaticseq_script_dragen} ${Sample}.somaticseq.hg19_multianno.csv ${Sample}.ErrorCorrectd.csv
 	else
 		touch ${Sample}.ErrorCorrectd.csv
 	fi
-	python3 ${PWD}/scripts/final_output.py ${Sample}_ErrorCorrectd.xlsx ${Sample}.ErrorCorrectd.csv ${Coverage}
+	python3 ${PWD}/scripts/final_output.py ${Sample}_ErrorCorrectd.xlsx ${Sample}.ErrorCorrectd.csv ${Coverage} ${mutectVcf}
 	"""
 }
 
@@ -256,7 +265,7 @@ process fastqc{
 	output:
 		path "*"
 	"""
-	${params.fastqc} -o ./ -f fastq ${params.sequences}/${Sample}_*R1_*.fastq.gz ${params.sequences}/${Sample}_*R2_*.fastq.gz
+	${params.fastqc} -o ./ -f fastq ${params.sequences}/${Sample}_*R1_*.fq.gz ${params.sequences}/${Sample}_*R2_*.fq.gz
 	"""
 }
 
@@ -342,19 +351,18 @@ process mutect2_run_uncoll {
 	input:
 		tuple val (Sample), file(abra_bam), file (abra_bai)
 	output:
-		tuple val (Sample), file ("${Sample}.mutect2.vcf")
+		tuple val (Sample), file ("mutect2_.csv")
 	script:
 	"""
-	${params.java_path}/java -Xmx10G -jar ${params.GATK42_path} Mutect2 -R ${params.genome} -I:tumor ${abra_bam} -O ${Sample}.mutect2.vcf -L ${params.bedfile}.bed -mbq 20
-	${params.java_path}/java -Xmx10G -jar ${params.GATK42_path} FilterMutectCalls -V ${Sample}.mutect2.vcf --stats ${Sample}.mutect2.vcf.stats -O ${Sample}_filtered.vcf -R ${params.genome} --unique-alt-read-count 3 --min-median-base-quality 20 --min-median-mapping-quality 30
-	#perl ${params.annovarLatest_path}/convert2annovar.pl -format vcf4 ${Sample}.mutect2.vcf --outfile ${Sample}.mutect2.avinput -allsample -withfreq --includeinfo
-	#perl ${params.annovarLatest_path}/table_annovar.pl ${Sample}.mutect2.avinput --out ${Sample}.mutect2.somaticseq --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all,clinvar_20170905 --operation g,r,f,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 ${params.annovarLatest_path}/humandb/ --xreffile ${params.annovarLatest_path}/example/gene_fullxref.txt
+	${params.java_path}/java -Xmx10G -jar ${params.GATK38_path} -T MuTect2 -R ${params.genome} -I:tumor ${abra_bam} -o ${Sample}.mutect2.vcf --dbsnp ${params.site2} -L ${params.bedfile}.bed -nct 25 -mbq 20
 
-	#if [ -s ${Sample}.mutect2.somaticseq.hg19_multianno.csv ]; then
-	#	python3 ${PWD}/scripts/somaticseqoutput-format_v2_mutect2.py ${Sample}.mutect2.somaticseq.hg19_multianno.csv mutect2_.csv
-	#else
-	#	touch mutect2_.csv		
-	#fi	
+	perl ${params.annovarLatest_path}/convert2annovar.pl -format vcf4 ${Sample}.mutect2.vcf --outfile ${Sample}.mutect2.avinput -allsample -withfreq --includeinfo
+	perl ${params.annovarLatest_path}/table_annovar.pl ${Sample}.mutect2.avinput --out ${Sample}.mutect2.somaticseq --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all,clinvar_20170905 --operation g,r,f,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 ${params.annovarLatest_path}/humandb/ --xreffile ${params.annovarLatest_path}/example/gene_fullxref.txt
+	if [ -s ${Sample}.mutect2.somaticseq.hg19_multianno.csv ]; then
+		python3 ${PWD}/scripts/somaticseqoutput-format_v2_mutect2.py ${Sample}.mutect2.somaticseq.hg19_multianno.csv mutect2_.csv
+	else
+		touch mutect2_.csv		
+	fi	
 	"""
 }
 
@@ -396,11 +404,11 @@ process somaticSeq_run_uncoll {
 		tuple val (Sample), file ("*")
 	script:
 	"""
-	${params.vcf_filter} ${mutectVcf} ${Sample}.mutect2_sort.vcf
+	#${params.vcf_filter} ${mutectVcf} ${Sample}.mutect2_sort.vcf
 	${params.vcf_filter} ${vardictVcf} ${Sample}.vardict_sort.vcf
 	${params.vcf_filter} ${varscanVcf} ${Sample}.varscan_sort.vcf
 
-	somaticseq_parallel.py --output-directory ${Sample}.somaticseq --genome-reference ${params.genome} --inclusion-region ${params.bedfile}.bed --threads 25 --pass-threshold 0 --lowqual-threshold 0 --algorithm xgboost -minMQ 0 -minBQ 0 -mincaller 0 --dbsnp-vcf /home/reference_genomes/dbSNPGATK/dbsnp_138.hg19.somatic.vcf single --bam-file ${finalBam} --mutect2-vcf ${Sample}.mutect2_sort.vcf --vardict-vcf ${Sample}.vardict_sort.vcf --varscan-vcf ${Sample}.varscan_sort.vcf --sample-name ${Sample}
+	somaticseq_parallel.py --output-directory ${Sample}.somaticseq --genome-reference ${params.genome} --inclusion-region ${params.bedfile}.bed --threads 25 --pass-threshold 0 --lowqual-threshold 0 --algorithm xgboost -minMQ 0 -minBQ 0 -mincaller 0 --dbsnp-vcf /home/reference_genomes/dbSNPGATK/dbsnp_138.hg19.somatic.vcf single --bam-file ${finalBam} --vardict-vcf ${Sample}.vardict_sort.vcf --varscan-vcf ${Sample}.varscan_sort.vcf --sample-name ${Sample}
 
 	${params.vcf_sorter_path} ${Sample}.somaticseq/Consensus.sSNV.vcf ${Sample}.somaticseq/somaticseq_snv.vcf
 	bgzip -c ${Sample}.somaticseq/somaticseq_snv.vcf > ${Sample}.somaticseq/somaticseq_snv.vcf.gz
@@ -420,7 +428,7 @@ process somaticSeq_run_uncoll {
 	else
 		touch ${Sample}.ErrorCorrectd.csv
 	fi
-	python3 ${PWD}/scripts/final_output.py ${Sample}_uncollapsed.xlsx ${Sample}.ErrorCorrectd.csv ${Coverage_uncollaps}
+	python3 ${PWD}/scripts/final_output.py ${Sample}_uncollapsed.xlsx ${Sample}.ErrorCorrectd.csv ${Coverage_uncollaps} ${mutectVcf}
 	"""
 }
 
@@ -435,9 +443,9 @@ workflow NARASIMHA_MRD {
 		SyntheticFastq(samples_ch)
 		ABRA2_realign(SyntheticFastq.out)
 		coverage_mosdepth(ABRA2_realign.out)
-		hsmetrics_run(ABRA2_realign.out)
-		CNS_filegen(ABRA2_realign.out)
-		espresso(CNS_filegen.out.collect())
+		//hsmetrics_run(ABRA2_realign.out)
+		//CNS_filegen(ABRA2_realign.out)
+		//espresso(CNS_filegen.out.collect())
 		mutect2_run(ABRA2_realign.out)
 		vardict(ABRA2_realign.out)
 		//lofreq(ABRA2_realign.out)

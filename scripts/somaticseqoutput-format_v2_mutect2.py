@@ -35,7 +35,7 @@ for row in x:
     #print (rowitems[-2].split(':'))
     #print (len(rowitems))
     readcounts=formatval[1]
-    #print (rowitems[9])
+    #print (formatval[1])
     if len(info)!=5 and info[0]!='SOMATIC':
         data['SOMATIC_FLAG'].append('NON SOMATIC')
         name_toolskey=0
@@ -50,20 +50,17 @@ for row in x:
     #        tools_name+=vartools[key]
     #data['Variant_Callers'].append(tools_name)        
     #data['VariantCaller_Count'].append(info[num_toolskey].split('=')[1])
-    ref_count = float(formatval[1].split(',')[0])
-    alt_count = float(formatval[1].split(',')[1])
-    data['REF_COUNT'].append(ref_count)
-    data['ALT_COUNT'].append(alt_count)
-    denominator = ref_count + alt_count
-    if denominator == 0:
-        vaf_calc = 0
-    else :
-        vaf_calc = alt_count /( alt_count + ref_count ) * 100
+    #vaf="{:.2%}".format(float(info[-1].split('=')[1]))
+    #vaf="{:.2}".format(float(formatval[2])*100) 
+    #data['VAF%'].append(vaf)
+    data['REF_COUNT'].append(formatval[1].split(',')[0])
+    data['ALT_COUNT'].append(formatval[1].split(',')[1])
+    vaf_calc=(float(formatval[1].split(',')[1]) /( float(formatval[1].split(',')[0])  + float(formatval[1].split(',')[1]) )) * 100
     data['VAF%'].append(round (vaf_calc, 2 ))
-    data['REF_F2R1'].append(formatval[-1].split(',')[1])
-    data['REF_F1R2'].append(formatval[-1].split(',')[0])
-    data['ALT_F2R1'].append(formatval[-1].split(',')[3])
-    data['ALT_F1R2'].append(formatval[-1].split(',')[2])
+    data['REF_F2R1'].append(formatval[-1])
+    data['REF_F1R2'].append(formatval[-2])
+    data['ALT_F2R1'].append(formatval[4])
+    data['ALT_F1R2'].append(formatval[3])
             
 df1=df.iloc[:,:5]
 #print (data.keys())
