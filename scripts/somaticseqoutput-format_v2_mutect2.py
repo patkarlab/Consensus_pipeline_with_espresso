@@ -26,7 +26,7 @@ data.setdefault('REF_F1R2', [])
 data.setdefault('ALT_F2R1', [])
 data.setdefault('ALT_F1R2', [])
 for row in x:
-    #print (row)	
+    print(row)	
     rowitems=row.split('\t')
     data['FILTER'].append(rowitems[9])
     #print (rowitems[9])
@@ -68,7 +68,7 @@ df2=pd.DataFrame(data, columns=data.keys())
 df3=df.iloc[:,5:discarded_column]
 
 horizontal_stack = pd.concat([df1, df2, df3], axis=1)
-horizontal_stack['cosmic84']=horizontal_stack['cosmic84'].str.replace(',' , ';')
+horizontal_stack['cosmic84']=horizontal_stack['cosmic84'].astype(str).str.replace(',' , ';')
 horizontal_stack['AAChange.refGene']=horizontal_stack['AAChange.refGene'].str.replace(',' , ';')
 horizontal_stack.replace(to_replace='.', value='-1', inplace=True)
 horizontal_stack=horizontal_stack.reindex(columns = somatic_cols)
