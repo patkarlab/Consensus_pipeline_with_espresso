@@ -61,6 +61,17 @@ process FastqToBam_NARASIMHA {
 	"""
 }
 
+process FastqToBam_U2AF1 {
+	input:
+		tuple val (Sample), file(R1_trim_fastq), file(R2_trim_fastq)
+	output:
+		tuple val (Sample), file ("*.unmapped.bam")
+	script:	
+	"""
+	java -Xmx12g -jar "/home/programs/fgbio/fgbio-2.0.1.jar" --compression 1 --async-io FastqToBam --input ${R1_trim_fastq} ${R2_trim_fastq} --read-structures 17S8M+T 20S8M+T --sample ${Sample} --library ${Sample} --output ${Sample}.unmapped.bam
+	"""
+}
+
 process trimming_trimmomatic {
 	input:
 		val Sample
@@ -192,7 +203,7 @@ process IndelRealigner{
 
 process SyntheticFastq {
 	input:
-		tuple val (Sample), file (cons_filt_bam)
+		tuple val (Sample), file (cons_filt_bam), file (cons_filt_bam_bai)
 	output:
 		tuple val (Sample), file ("*.synreads.bam"), file ("*.synreads.bam.bai")
 	script:
@@ -261,6 +272,21 @@ process espresso {
 	"""
 }
 
+process coverage_bedtools {
+	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions_bedtools.bed'
+	input:
+		tuple val (Sample), file (abra_bam), file (abra_bai)
+	output:
+		tuple val (Sample), file ("${Sample}_umi_cov.regions_bedtools.bed")
+	script:
+	"""
+	${params.bedtools} bamtobed -i ${abra_bam} > ${Sample}_ErrorCorrected.bed
+	${params.bedtools} coverage -counts -a ${params.bedfile}.bed -b ${Sample}_ErrorCorrected.bed > "${Sample}_umi_cov.regions_bedtools.bed"
+	
+	"""	
+}
+
+
 process coverage_mosdepth {
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions.bed'
 	input:
@@ -272,6 +298,21 @@ process coverage_mosdepth {
 	${params.mosdepth_script} ${abra_bam} ${Sample}_umi_cov ${params.bedfile}.bed
 	#${params.mosdepth_script} ${abra_bam} ${Sample}_exon_umi_cov ${params.bedfile2}.bed
 	"""
+}
+
+process coverage_bedtools_uncoll {
+	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_uncollaps_bedtools.bed'
+	//publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_exon_uncollaps_bedtools.bed'
+	input:
+		tuple val (Sample), file (uncollaps_bam), file (uncollaps_bam_bai)
+	output:
+		tuple val (Sample), file ("${Sample}_uncollaps_bedtools.bed")
+	script:
+	"""
+	${params.bedtools} bamtobed -i ${uncollaps_bam} > ${Sample}_Uncollaps.bed
+	${params.bedtools} coverage -counts -a ${params.bedfile}.bed -b ${Sample}_Uncollaps.bed > "${Sample}_uncollaps_bedtools.bed"
+	#${params.bedtools} coverage -counts -a ${params.bedfile2}.bed -b ${Sample}_Uncollaps.bed > "${Sample}_exon_uncollaps_bedtools.bed"
+	"""	
 }
 
 process coverage_mosdepth_uncoll {
@@ -525,7 +566,7 @@ process somaticSeq_run_uncoll {
 	//publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.UncollapsVariant.vcf'
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_uncollapsed.xlsx'
 	input:
-		tuple val (Sample), file (Coverage_uncollaps), file (Coverage_uncollaps_exon), file (mutectVcf), file (vardictVcf), file (varscanVcf), file(finalBam), file (finalBamBai)
+		tuple val (Sample), file (Coverage_uncollaps), file (mutectVcf), file (vardictVcf), file (varscanVcf), file(finalBam), file (finalBamBai)
 	output:
 		tuple val (Sample), file ("*")
 	script:
@@ -581,6 +622,8 @@ workflow MRD {
 
 		coverage_mosdepth(ABRA2_realign.out)
 		coverage_mosdepth_uncoll(sam_conversion.out)
+		coverage_bedtools(ABRA2_realign.out)
+		coverage_bedtools_uncoll(sam_conversion.out)
 
 		hsmetrics_run(ABRA2_realign.out)
 		hsmetrics_run_uncoll(sam_conversion.out)
@@ -597,8 +640,8 @@ workflow MRD {
 		//lofreq_uncoll(MapBam.out)
 		varscan_uncoll(sam_conversion.out)
 
-		somaticSeq_run(coverage_mosdepth.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
-		somaticSeq_run_uncoll(coverage_mosdepth_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
+		somaticSeq_run(coverage_bedtools.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
+		somaticSeq_run_uncoll(coverage_bedtools_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
 }
 
 workflow NARASIMHA_MRD {
@@ -688,6 +731,43 @@ workflow NARASIMHA_MRD_VALIDATION {
 
 		somaticSeq_run(coverage_mosdepth.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
 		somaticSeq_run_uncoll(coverage_mosdepth_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
+}
+
+workflow U2AF1MRD {
+	Channel
+		.fromPath(params.input)
+		.splitCsv(header:false)
+		.flatten()
+		.set { samples_ch }
+
+	main:
+		trimming(samples_ch)
+		FastqToBam_U2AF1(trimming.out) 
+		MapBam(FastqToBam_U2AF1.out) 
+		GroupReadsByUmi(MapBam.out) 
+		CallMolecularConsensusReads(GroupReadsByUmi.out) 
+		FilterConsBam(CallMolecularConsensusReads.out) 
+		SyntheticFastq(FilterConsBam.out)
+		ABRA2_realign(FilterConsBam.out)
+
+		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
+
+		coverage_bedtools(ABRA2_realign.out)
+		coverage_bedtools_uncoll(sam_conversion.out)
+
+		hsmetrics_run(ABRA2_realign.out)
+		hsmetrics_run_uncoll(sam_conversion.out)
+
+		mutect2_run(ABRA2_realign.out)
+		vardict(ABRA2_realign.out)
+		varscan(ABRA2_realign.out)
+
+		mutect2_run_uncoll(sam_conversion.out)
+		vardict_uncoll(sam_conversion.out)
+		varscan_uncoll(sam_conversion.out)
+
+		somaticSeq_run(coverage_bedtools.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
+		somaticSeq_run_uncoll(coverage_bedtools_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
 }
 
 workflow.onComplete {
