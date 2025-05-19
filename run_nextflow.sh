@@ -62,39 +62,40 @@
 #conda deactivate
 
 # For Narasimha MRD Dragen
-#source activate new_base
-#nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/nextflow.config run narasimha_mrd_dragen.nf -entry NARASIMHA_MRD \
-#--bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/mips_mrd_bal210125_sortd \
-#--bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/mips_mrd_bal11March_exon_sortd \
-#--sequences /home/pipelines/Consensus_pipeline_with_espresso/sequences/ \
-#--input /home/pipelines/Consensus_pipeline_with_espresso/samplesheet.csv \
-#-resume -bg
-#conda deactivate
+source activate new_base
+nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/nextflow.config run narasimha_mrd_dragen.nf -entry NARASIMHA_MRD \
+--bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/CEBPA_MRD_sortd \
+--bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/CEBPA_MRD_sortd \
+--sequences /home/pipelines/Consensus_pipeline_with_espresso/sequences/ \
+--input /home/pipelines/Consensus_pipeline_with_espresso/samplesheet.csv \
+-resume -bg
+conda deactivate
 
 # MIPS-gencore trial
 #source activate new_base
 #nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/nextflow.config run scripts/mips_gencore.nf -entry MIPS_MRD_Gencore \
 #--bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/mips_mrd_bal11March_asxl2ex11_sortd \
 #--bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/mips_mrd_bal11March_exon_sortd \
-#--sequences /home/pipelines/Consensus_pipeline_with_espresso/sequences/ \
-#--input /home/pipelines/Consensus_pipeline_with_espresso/samplesheet.csv \
 #-resume -bg
 
 # NPM1-FLT3 MRD
 #source activate new_base
 #nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/scripts/npm1_flt3.config run scripts/npm1_flt3_mrd.nf -entry NPM1 \
-#--sequences /home/pipelines/Consensus_pipeline_with_espresso/sequences/ \
-#--input /home/pipelines/Consensus_pipeline_with_espresso/samplesheet.csv \
 #--bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/NPM1_FLT3 \
 #-resume -bg
 
 # For Narasimha MRD
-source activate new_base
-nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/nextflow.config run mips_mrd.nf -entry U2AF1MRD \
---bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/u2af1_sortd \
---bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/u2af1_sortd \
---sequences /home/pipelines/Consensus_pipeline_with_espresso/sequences/ \
---input /home/pipelines/Consensus_pipeline_with_espresso/samplesheet.csv \
--resume -bg
-conda deactivate
+# source activate new_base
+# nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/nextflow.config run mips_mrd.nf -entry U2AF1MRD \
+# --bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/u2af1_sortd \
+# --bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/u2af1_sortd \
+# -resume -bg 
+# conda deactivate
 
+# For U2AF1 MRD
+#source activate new_base
+#nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/nextflow.config run U2AF1-MRD.nf -entry U2AF1MRD_FGBIO \
+#--bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/CEBPA_MRD_sortd \
+#--bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/CEBPA_MRD_sortd \
+#-resume -bg 
+#conda deactivate

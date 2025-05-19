@@ -1,0 +1,57 @@
+##fileformat=VCFv4.1
+##FILTER=<ID=PASS,Description="All filters passed">
+##SomaticSeq=v3.7.3__2025-04-22_12:14:26
+##FILTER=<ID=LowQual,Description="Less confident somatic mutation calls with probability value at least 0.1">
+##FILTER=<ID=REJECT,Description="Rejected as a confident somatic mutation with ONCOSCORE below 2">
+##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description="Somatic mutation in primary">
+##INFO=<ID=MVD,Number=3,Type=Integer,Description="Calling decision of the 3 algorithms: MuTect, VarScan2, VarDict">
+##INFO=<ID=NUM_TOOLS,Number=1,Type=Float,Description="Number of tools called it Somatic">
+##INFO=<ID=LC,Number=1,Type=Float,Description="Linguistic sequence complexity in Phred scale between 0 to 40. Higher value means higher complexity.">
+##INFO=<ID=AF,Number=1,Type=Float,Description="Variant Allele Fraction">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=DP4,Number=4,Type=Integer,Description="ref forward, ref reverse, alt forward, alt reverse">
+##FORMAT=<ID=CD4,Number=4,Type=Integer,Description="ref concordant, ref discordant, alt concordant, alt discordant">
+##FORMAT=<ID=refMQ,Number=1,Type=Float,Description="average mapping score for reference reads">
+##FORMAT=<ID=altMQ,Number=1,Type=Float,Description="average mapping score for alternate reads">
+##FORMAT=<ID=refBQ,Number=1,Type=Float,Description="average base quality score for reference reads">
+##FORMAT=<ID=altBQ,Number=1,Type=Float,Description="average base quality score for alternate reads">
+##FORMAT=<ID=refNM,Number=1,Type=Float,Description="average edit distance for reference reads">
+##FORMAT=<ID=altNM,Number=1,Type=Float,Description="average edit distance for alternate reads">
+##FORMAT=<ID=fetSB,Number=1,Type=Float,Description="Strand bias FET">
+##FORMAT=<ID=fetCD,Number=1,Type=Float,Description="Concordance FET">
+##FORMAT=<ID=uMQ,Number=1,Type=Float,Description="p of MannWhitneyU test of mapping quality: p close to 0 means ALT MQs are significantly less than reference MQs, and p close to 1 means ALT MQs are significantly greater than reference MQs.">
+##FORMAT=<ID=uBQ,Number=1,Type=Float,Description="p of MannWhitneyU test of base quality: p close to 0 means ALT BQs are significantly less than reference BQs, and p close to 1 means ALT BQs are significantly greater than reference BQs.">
+##FORMAT=<ID=MQ0,Number=1,Type=Integer,Description="Number of reads with mapping quality of 0">
+##FORMAT=<ID=VAF,Number=1,Type=Float,Description="Variant Allele Frequency">
+##contig=<ID=chr21>
+##bcftools_concatVersion=1.9+htslib-1.9
+##bcftools_concatCommand=concat -a -o U2AF1_2.ErrorCorrectd.vcf U2AF1_2.somaticseq/somaticseq_snv.vcf.gz U2AF1_2.somaticseq/somaticseq_indel.vcf.gz; Date=Tue Apr 22 12:22:27 2025
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	U2AF1_2
+chr21	44524428	.	GC	G	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=15.1;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13776,0,2:0,13776,0,2:60:60:45:45:0.138502:2:1:1:0.5:0.5:0:0.000145
+chr21	44524434	.	C	CG	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=15.6;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13796,0,2:0,13796,0,2:60:60:45:45:0.138953:1:1:1:0.5:0.5:0:0.000145
+chr21	44524435	.	GT	G	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=15.6;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13795,0,2:0,13795,0,2:60:60:45:45:0.138746:1.5:1:1:0.5:0.5:0:0.000145
+chr21	44524437	.	C	CG	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=15.5;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13796,0,2:0,13796,0,2:60:60:45:45:0.138808:1:1:1:0.5:0.5:0:0.000145
+chr21	44524439	.	GT	G	0	LowQual	MVD=0,0,1;NUM_TOOLS=1;LC=15.3;AF=0.00145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13774,0,20:0,13774,0,20:60:60:45:45:0.136997:1.15:1:1:0.5:0.5:0:0.00145
+chr21	44524443	.	A	C	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=15.3;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13800,0,2:0,13800,0,2:60:60:45:45:0.13913:1:1:1:0.5:0.5:0:0.000145
+chr21	44524446	.	G	T	0	PASS	SOMATIC;MVD=0,1,1;NUM_TOOLS=2;LC=15.3;AF=0.00174	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13777,0,24:0,13777,0,24:60:60:45:45:0.13733:1.16667:1:1:0.5:0.5:0:0.00174
+chr21	44524456	rs371769427	G	A	0	PASS	SOMATIC;MVD=1,1,1;NUM_TOOLS=3;LC=16.1;AF=0.0618	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/1:0,12929,0,852:0,12929,0,852:60:60:45:45:0.0768814:1.06221:1:1:0.5:0.5:0:0.0618
+chr21	44524463	.	T	C	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=16.3;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13801,0,2:0,13801,0,2:60:60:45:45:0.139193:1:1:1:0.5:0.5:0:0.000145
+chr21	44524482	.	T	C	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=16.4;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13801,0,2:0,13801,0,2:60:60:45:45:0.139193:1:1:1:0.5:0.5:0:0.000145
+chr21	44524504	.	C	T	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=14.1;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13801,0,2:0,13801,0,2:60:60:45:45:0.139193:1:1:1:0.5:0.5:0:0.000145
+chr21	44524519	.	G	A	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=14.1;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13801,0,2:0,13801,0,2:60:60:45:45:0.139193:1:1:1:0.5:0.5:0:0.000145
+chr21	44524520	.	G	A	0	LowQual	MVD=0,0,1;NUM_TOOLS=1;LC=14.1;AF=0.00116	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13787,0,16:0,13787,0,16:60:60:45:45:0.138246:1.0625:1:1:0.5:0.5:0:0.00116
+chr21	44524527	.	G	A	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=14.2;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13801,0,2:0,13801,0,2:60:60:45:45:0.139193:1:1:1:0.5:0.5:0:0.000145
+chr21	44524532	.	C	T	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=14.5;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13801,0,2:0,13801,0,2:60:60:45:45:0.139193:1:1:1:0.5:0.5:0:0.000145
+chr21	44524546	.	G	A	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=15.4;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13799,0,2:0,13799,0,2:60:60:45:45:0.138996:1:1:1:0.5:0.5:0:0.000145
+chr21	44524554	.	A	G	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=15.1;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13801,0,2:0,13801,0,2:60:60:45:45:0.139193:1:1:1:0.5:0.5:0:0.000145
+chr21	44524556	.	C	A	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=14.7;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13794,0,2:0,13794,0,2:60:60:45:45:0.138683:1.5:1:1:0.5:0.5:0:0.000145
+chr21	44524562	.	C	T	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=14;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13801,0,2:0,13801,0,2:60:60:45:45:0.139193:1:1:1:0.5:0.5:0:0.000145
+chr21	44524566	.	G	A	0	LowQual	MVD=0,0,1;NUM_TOOLS=1;LC=14.1;AF=0.000797	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13792,0,11:0,13792,0,11:60:60:45:45:0.138486:1.18182:1:1:0.5:0.5:0:0.000797
+chr21	44524567	.	A	G	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=14.1;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13801,0,2:0,13801,0,2:60:60:45:45:0.13912:1.5:1:1:0.5:0.5:0:0.000145
+chr21	44524577	.	C	A	0	LowQual	MVD=0,0,1;NUM_TOOLS=1;LC=14.6;AF=0.000942	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13789,0,13:0,13789,0,13:60:60:45:45:0.138081:1.30769:1:1:0.5:0.5:0:0.000942
+chr21	44524581	.	AT	A	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=14.4;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13797,0,2:0,13797,0,2:60:60:45:45:0.138871:1:1:1:0.5:0.5:0:0.000145
+chr21	44524582	.	T	TG	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=14.2;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13800,0,2:0,13800,0,2:60:60:45:45:0.139058:1:1:1:0.5:0.5:0:0.000145
+chr21	44524584	.	A	C	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=13.7;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13800,0,2:0,13800,0,2:60:60:45:45:0.138913:1:1:1:0.5:0.5:0:0.000145
+chr21	44524585	.	C	A	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=13.4;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13792,0,2:0,13792,0,2:60:60:45:45:0.137979:1.5:1:1:0.5:0.5:0:0.000145
+chr21	44524586	.	AT	A	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=13.1;AF=0.000145	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13794,0,2:0,13794,0,2:60:60:45:45:0.138466:1:1:1:0.5:0.5:0:0.000145
+chr21	44524591	.	C	CT	0	LowQual	MVD=0,0,1;NUM_TOOLS=1;LC=12.5;AF=0.00109	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,13778,0,15:0,13778,0,15:60:60:45:45:0.137248:1.26667:1:1:0.5:0.5:0:0.00109

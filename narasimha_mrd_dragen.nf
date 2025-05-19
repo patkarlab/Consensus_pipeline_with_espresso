@@ -474,7 +474,7 @@ workflow NARASIMHA_MRD {
 		coverage_bedtools(ABRA2_realign.out)
 		hsmetrics_run(ABRA2_realign.out)
 		CNS_filegen(ABRA2_realign.out)
-		espresso(CNS_filegen.out.collect())
+		//espresso(CNS_filegen.out.collect())
 		mutect2_run(ABRA2_realign.out)
 		vardict(ABRA2_realign.out)
 		//lofreq(ABRA2_realign.out)
@@ -483,18 +483,18 @@ workflow NARASIMHA_MRD {
 		somaticSeq_run(coverage_bedtools.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
 
 		//Uncollapsed data analysis
-		trimming(samples_ch)
-		fastqc(samples_ch)
-		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
-		//coverage_mosdepth_uncoll(sam_conversion.out)
-		coverage_bedtools_uncoll(sam_conversion.out)
-		hsmetrics_run_uncoll(sam_conversion.out)
-		minimap_getitd(sam_conversion.out)
-		mutect2_run_uncoll(sam_conversion.out)
-		vardict_uncoll(sam_conversion.out)
-		//lofreq_uncoll(MapBam.out)
-		varscan_uncoll(sam_conversion.out)
-		somaticSeq_run_uncoll(coverage_bedtools_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
+		// trimming(samples_ch)
+		// fastqc(samples_ch)
+		// pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
+		// //coverage_mosdepth_uncoll(sam_conversion.out)
+		// coverage_bedtools_uncoll(sam_conversion.out)
+		// hsmetrics_run_uncoll(sam_conversion.out)
+		// minimap_getitd(sam_conversion.out)
+		// mutect2_run_uncoll(sam_conversion.out)
+		// vardict_uncoll(sam_conversion.out)
+		// //lofreq_uncoll(MapBam.out)
+		// varscan_uncoll(sam_conversion.out)
+		// somaticSeq_run_uncoll(coverage_bedtools_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
 }
 
 workflow.onComplete {

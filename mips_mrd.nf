@@ -9,7 +9,8 @@ BED file: ${params.bedfile}.bed
 Sequences in:${params.sequences}
 """
 
-process trimming { 
+process trimming {
+	tag "${Sample}" 
 	input:
 		val (Sample)
 	output:
@@ -62,13 +63,16 @@ process FastqToBam_NARASIMHA {
 }
 
 process FastqToBam_U2AF1 {
+	tag "${Sample}"
 	input:
 		tuple val (Sample), file(R1_trim_fastq), file(R2_trim_fastq)
+		// val (Sample)
 	output:
 		tuple val (Sample), file ("*.unmapped.bam")
 	script:	
 	"""
-	java -Xmx12g -jar "/home/programs/fgbio/fgbio-2.0.1.jar" --compression 1 --async-io FastqToBam --input ${R1_trim_fastq} ${R2_trim_fastq} --read-structures 17S8M+T 20S8M+T --sample ${Sample} --library ${Sample} --output ${Sample}.unmapped.bam
+	java -Xmx12g -jar "/home/programs/fgbio/fgbio-2.0.1.jar" --compression 1 --async-io FastqToBam --input ${R1_trim_fastq} ${R2_trim_fastq} --read-structures 8M+T 8M+T --sample ${Sample} --library ${Sample} --output ${Sample}.unmapped.bam
+	#java -Xmx12g -jar "/home/programs/fgbio/fgbio-2.0.1.jar" --compression 1 --async-io FastqToBam --input ${params.sequences}/${Sample}_*R1_*.fastq.gz ${params.sequences}/${Sample}_*R2_*.fastq.gz --read-structures 17S8M+T 20S8M+T --sample ${Sample} --library ${Sample} --output ${Sample}.unmapped.bam
 	"""
 }
 
@@ -89,6 +93,7 @@ process trimming_trimmomatic {
 }
 
 process pair_assembly_pear {
+	tag "${Sample}"
 	input:
 		tuple val (Sample), file(paired_forward), file(paired_reverse)
 	output:
@@ -124,7 +129,8 @@ process sam_conversion {
 	"""
 }
 
-process MapBam {	
+process MapBam {
+	tag "${Sample}"	
 	//publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.mapped.bam*'
 	input:
 		tuple val (Sample), file(unmapped_bam)
@@ -140,17 +146,37 @@ process MapBam {
 }
 
 process GroupReadsByUmi {
+	tag "${Sample}"
+	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: "${Sample}_family.png"
 	input:
 		tuple val (Sample), file(mapped_bam)
 	output: 
-		tuple val (Sample), file ("*.grouped.bam")	
+		tuple val (Sample), file ("*.grouped.bam"), emit : grouped_bam_ch
+		path ("${Sample}_family.png")
 	script:
 	"""
-	java -Xmx8g -jar ${params.fgbio_path} --compression 1 --async-io GroupReadsByUmi --input ${mapped_bam} --strategy Adjacency --edits 1 --output ${Sample}.grouped.bam --family-size-histogram ${Sample}.tag-family-sizes.txt
+	java -Xmx20g -jar ${params.fgbio_path} --compression 1 --async-io GroupReadsByUmi --input ${mapped_bam} --strategy Adjacency --edits 1 --output ${Sample}.grouped.bam --family-size-histogram ${Sample}.tag-family-sizes.txt
+	${params.plot_family_size} ${Sample}.tag-family-sizes.txt ${Sample}_family
+	"""
+}
+
+process GroupReadsByUmi_amplicon {
+	tag "${Sample}"
+	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: "${Sample}_family.png"
+	input:
+		tuple val (Sample), file(mapped_bam)
+	output: 
+		tuple val (Sample), file ("*.grouped.bam"), emit : filtered_files_ch
+		path ("${Sample}_family.png")
+	script:
+	"""
+	java -Xmx25g -jar ${params.fgbio_new} --compression 1 --async-io GroupReadsByUmi --input ${mapped_bam} --strategy Identity --edits 0 --output ${Sample}.grouped.bam --family-size-histogram ${Sample}.tag-family-sizes.txt
+	${params.plot_family_size} ${Sample}.tag-family-sizes.txt ${Sample}_family
 	"""
 }
 
 process CallMolecularConsensusReads {
+	tag "${Sample}"
 	input:
 		tuple val (Sample), file (grouped_bam)
 	output:
@@ -165,7 +191,22 @@ process CallMolecularConsensusReads {
 	"""
 }
 
+process CallMolecularConsensusReadsAmplicon {
+	tag "${Sample}"
+	input:
+		tuple val (Sample), file (grouped_bam)
+	output:
+		tuple val (Sample), file ("*.cons.unmapped.bam")
+	script:
+	"""
+	# This step generates unmapped consensus reads from the grouped reads and immediately filters them
+	java -Xmx30g -jar ${params.fgbio_new} --compression 0 CallMolecularConsensusReads --input ${grouped_bam} --output /dev/stdout --min-reads 20 --threads $task.cpus | java -Xmx25g -jar ${params.fgbio_new} --compression 1 FilterConsensusReads --input /dev/stdin --output ${Sample}.cons.unmapped.bam --ref ${params.genome} --min-reads 20 --min-base-quality 20 --max-base-error-rate 0.2
+	#java -Xmx30g -jar ${params.fgbio_new} --compression 0 CallDuplexConsensusReads --input ${grouped_bam} --output /dev/stdout --min-reads 4 --threads $task.cpus | java -Xmx25g -jar ${params.fgbio_new} --compression 1 FilterConsensusReads --input /dev/stdin --output ${Sample}.cons.unmapped.bam --ref ${params.genome} --min-reads 4 --min-base-quality 20 --max-base-error-rate 0.2
+	"""
+}
+
 process FilterConsBam {
+	tag "${Sample}"
 	input:
 		tuple val (Sample), file (cons_unmapped_bam)
 	output:
@@ -220,6 +261,7 @@ process SyntheticFastq {
 }
 
 process ABRA2_realign {
+	tag "${Sample}"
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.bam*'
 	input:
 		tuple val (Sample), file (filt_bam), file (filt_bai)
@@ -273,6 +315,7 @@ process espresso {
 }
 
 process coverage_bedtools {
+	tag "${Sample}"
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions_bedtools.bed'
 	input:
 		tuple val (Sample), file (abra_bam), file (abra_bai)
@@ -301,6 +344,7 @@ process coverage_mosdepth {
 }
 
 process coverage_bedtools_uncoll {
+	tag "${Sample}"
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_uncollaps_bedtools.bed'
 	//publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_exon_uncollaps_bedtools.bed'
 	input:
@@ -329,6 +373,7 @@ process coverage_mosdepth_uncoll {
 }
 
 process hsmetrics_run {
+	tag "${Sample}"
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_hsmetrics.txt'
 	input:
 		tuple val(Sample), file(abra_bam), file (abra_bai)
@@ -341,6 +386,7 @@ process hsmetrics_run {
 }
 
 process hsmetrics_run_uncoll {
+	tag "${Sample}"
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_uncoll_hsmetrics.txt'
 	input:
 		tuple val(Sample), file(abra_bam), file (abra_bai)
@@ -380,7 +426,7 @@ process mutect2_run {
 	${params.java_path}/java -Xmx10G -jar ${params.GATK42_path} FilterMutectCalls -V ${Sample}.mutect2.vcf --stats ${Sample}.mutect2.vcf.stats -O ${Sample}_filtered.vcf -R ${params.genome} --unique-alt-read-count 3 --min-median-base-quality 20 --min-median-mapping-quality 30
 	#perl ${params.annovarLatest_path}/convert2annovar.pl -format vcf4 ${Sample}.mutect2.vcf --outfile ${Sample}.mutect2.avinput -allsample -withfreq --includeinfo
 	#perl ${params.annovarLatest_path}/table_annovar.pl ${Sample}.mutect2.avinput --out ${Sample}.mutect2.somaticseq --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all,clinvar_20170905 --operation g,r,f,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 ${params.annovarLatest_path}/humandb/ --xreffile ${params.annovarLatest_path}/example/gene_fullxref.txt
-#
+	#
 	#if [ -s ${Sample}.mutect2.somaticseq.hg19_multianno.csv ]; then
 	#	python3 ${PWD}/scripts/somaticseqoutput-format_v2_mutect2.py ${Sample}.mutect2.somaticseq.hg19_multianno.csv mutect2_.csv
 	#else
@@ -390,6 +436,7 @@ process mutect2_run {
 }
 
 process mutect2_run_uncoll {
+	tag "${Sample}"
 	maxForks 10
 	input:
 		tuple val (Sample), file(abra_bam), file (abra_bai)
@@ -397,11 +444,11 @@ process mutect2_run_uncoll {
 		tuple val (Sample), file ("${Sample}.mutect2.vcf")
 	script:
 	"""
-	${params.java_path}/java -Xmx10G -jar ${params.GATK42_path} Mutect2 -R ${params.genome} -I:tumor ${abra_bam} -O ${Sample}.mutect2.vcf -L ${params.bedfile}.bed -mbq 20
-	${params.java_path}/java -Xmx10G -jar ${params.GATK42_path} FilterMutectCalls -V ${Sample}.mutect2.vcf --stats ${Sample}.mutect2.vcf.stats -O ${Sample}_filtered.vcf -R ${params.genome} --unique-alt-read-count 3 --min-median-base-quality 20 --min-median-mapping-quality 30
+	${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} Mutect2 -R ${params.genome} -I:tumor ${abra_bam} -O ${Sample}.mutect2.vcf -L ${params.bedfile}.bed -mbq 20
+	${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} FilterMutectCalls -V ${Sample}.mutect2.vcf --stats ${Sample}.mutect2.vcf.stats -O ${Sample}_filtered.vcf -R ${params.genome} --unique-alt-read-count 3 --min-median-base-quality 20 --min-median-mapping-quality 30
 	#perl ${params.annovarLatest_path}/convert2annovar.pl -format vcf4 ${Sample}.mutect2.vcf --outfile ${Sample}.mutect2.avinput -allsample -withfreq --includeinfo
 	#perl ${params.annovarLatest_path}/table_annovar.pl ${Sample}.mutect2.avinput --out ${Sample}.mutect2.somaticseq --remove --protocol refGene,cytoBand,cosmic84,popfreq_all_20150413,avsnp150,intervar_20180118,1000g2015aug_all,clinvar_20170905 --operation g,r,f,f,f,f,f,f --buildver hg19 --nastring '-1' --otherinfo --csvout --thread 10 ${params.annovarLatest_path}/humandb/ --xreffile ${params.annovarLatest_path}/example/gene_fullxref.txt
-#
+	#
 	#if [ -s ${Sample}.mutect2.somaticseq.hg19_multianno.csv ]; then
 	#	python3 ${PWD}/scripts/somaticseqoutput-format_v2_mutect2.py ${Sample}.mutect2.somaticseq.hg19_multianno.csv mutect2_.csv
 	#else
@@ -473,10 +520,19 @@ process varscan {
 	#${params.samtools} mpileup -d 1000000 -f ${params.genome} ${abra_bam} > ${Sample}.mpileup
 	${params.samtools} mpileup -d 1000000 -A -a -l ${params.bedfile}.bed -f ${params.genome} ${abra_bam} > ${Sample}.mpileup
 	#${params.java_path}/java -jar ${params.varscan_path} mpileup2snp ${Sample}.mpileup --min-coverage 2 --min-reads2 2 --min-avg-qual 15 --min-var-freq 0.0001 --p-value 1e-4 --output-vcf 1 > ${Sample}.varscan_snp.vcf
-	${params.java_path}/java -jar ${params.varscan_path} mpileup2snp ${Sample}.mpileup --min-coverage 2 --min-reads2 2 --min-avg-qual 1 --min-var-freq 0.000001 --p-value 1e-1 --output-vcf 1 > ${Sample}.varscan_snp.vcf
+
+	if [ -s ${Sample}.mpileup ]; then
+		${params.java_path}/java -jar ${params.varscan_path} mpileup2snp ${Sample}.mpileup --min-coverage 2 --min-reads2 2 --min-avg-qual 1 --min-var-freq 0.000001 --p-value 1e-1 --output-vcf 1 > ${Sample}.varscan_snp.vcf
+	else 
+		echo -e "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" > ${Sample}.varscan_snp.vcf
+	fi
 
 	#${params.java_path}/java -jar ${params.varscan_path} mpileup2indel ${Sample}.mpileup --min-coverage 2 --min-reads2 2 --min-avg-qual 15 --min-var-freq 0.0001 --p-value 1e-4 --output-vcf 1 > ${Sample}.varscan_indel.vcf
-	${params.java_path}/java -jar ${params.varscan_path} mpileup2indel ${Sample}.mpileup --min-coverage 2 --min-reads2 2 --min-avg-qual 1 --min-var-freq 0.000001 --p-value 1e-1 --output-vcf 1 > ${Sample}.varscan_indel.vcf
+	if [ -s ${Sample}.mpileup ]; then
+		${params.java_path}/java -jar ${params.varscan_path} mpileup2indel ${Sample}.mpileup --min-coverage 2 --min-reads2 2 --min-avg-qual 1 --min-var-freq 0.000001 --p-value 1e-1 --output-vcf 1 > ${Sample}.varscan_indel.vcf
+	else
+		echo -e "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" > ${Sample}.varscan_indel.vcf
+	fi
 
 	bgzip -c ${Sample}.varscan_snp.vcf > ${Sample}.varscan_snp.vcf.gz
 	bgzip -c ${Sample}.varscan_indel.vcf > ${Sample}.varscan_indel.vcf.gz
@@ -524,13 +580,15 @@ process varscan_uncoll {
 }
 
 process somaticSeq_run {
+	tag "${Sample}"
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.vcf'
 	//publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.csv'
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_ErrorCorrectd.xlsx'
 	input:
 		tuple val (Sample), file (Coverage), file (mutectVcf), file (vardictVcf), file (varscanVcf), file(finalBam), file (finalBamBai)
 	output:
-		tuple val (Sample), file ("*")
+		tuple val (Sample), file ("${Sample}.ErrorCorrectd.vcf"), emit: correctd_vcf_files
+		tuple val (Sample), file ("${Sample}_ErrorCorrectd.xlsx"), emit: correctd_excels
 	script:
 	"""
 	${params.vcf_filter} ${mutectVcf} ${Sample}.mutect2_sort.vcf
@@ -563,6 +621,7 @@ process somaticSeq_run {
 }
 
 process somaticSeq_run_uncoll {
+	tag "${Sample}"
 	//publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.UncollapsVariant.vcf'
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_uncollapsed.xlsx'
 	input:
@@ -599,6 +658,10 @@ process somaticSeq_run_uncoll {
 	"""
 }
 
+include { FASTP } from './scripts/fastp.nf'
+include { CUTADAPT } from './scripts/cutadapt.nf'
+include { BAMTOFASTQ } from './scripts/cutadapt.nf'
+
 workflow MRD {
 	Channel
 		.fromPath(params.input)
@@ -611,7 +674,7 @@ workflow MRD {
 		FastqToBam(trimming.out) 
 		MapBam(FastqToBam.out) 
 		GroupReadsByUmi(MapBam.out) 
-		CallMolecularConsensusReads(GroupReadsByUmi.out) 
+		CallMolecularConsensusReads(GroupReadsByUmi.out.grouped_bam_ch) 
 		FilterConsBam(CallMolecularConsensusReads.out) 
 		SyntheticFastq(FilterConsBam.out)
 		ABRA2_realign(FilterConsBam.out)
@@ -657,7 +720,7 @@ workflow NARASIMHA_MRD {
 		FastqToBam_NARASIMHA(trimming.out) 
 		MapBam(FastqToBam_NARASIMHA.out) 
 		GroupReadsByUmi(MapBam.out) 
-		CallMolecularConsensusReads(GroupReadsByUmi.out) 
+		CallMolecularConsensusReads(GroupReadsByUmi.out.grouped_bam_ch) 
 		FilterConsBam(CallMolecularConsensusReads.out) 
 		//IndelRealigner(FilterConsBam.out)
 		SyntheticFastq(FilterConsBam.out)
@@ -702,7 +765,7 @@ workflow NARASIMHA_MRD_VALIDATION {
 		FastqToBam_NARASIMHA(trimming.out) 
 		MapBam(FastqToBam_NARASIMHA.out) 
 		GroupReadsByUmi(MapBam.out) 
-		CallMolecularConsensusReads(GroupReadsByUmi.out) 
+		CallMolecularConsensusReads(GroupReadsByUmi.out.grouped_bam_ch) 
 		FilterConsBam(CallMolecularConsensusReads.out) 
 		//SyntheticFastq(FilterConsBam.out)
 		ABRA2_realign(FilterConsBam.out)
@@ -742,32 +805,38 @@ workflow U2AF1MRD {
 
 	main:
 		trimming(samples_ch)
-		FastqToBam_U2AF1(trimming.out) 
+		// FASTP(trimming.out)
+		// fastqc(samples_ch)
+		CUTADAPT (trimming.out)
+		FastqToBam_U2AF1(CUTADAPT.out) 
 		MapBam(FastqToBam_U2AF1.out) 
-		GroupReadsByUmi(MapBam.out) 
-		CallMolecularConsensusReads(GroupReadsByUmi.out) 
-		FilterConsBam(CallMolecularConsensusReads.out) 
-		SyntheticFastq(FilterConsBam.out)
-		ABRA2_realign(FilterConsBam.out)
+		GroupReadsByUmi_amplicon(MapBam.out) 
+		CallMolecularConsensusReadsAmplicon(GroupReadsByUmi_amplicon.out.filtered_files_ch)
+		// FilterConsBam(CallMolecularConsensusReadsAmplicon.out) 
+		// ABRA2_realign(FilterConsBam.out)
 
-		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
+		// Temporary arrangement
+		// BAMTOFASTQ (FilterConsBam.out)
 
-		coverage_bedtools(ABRA2_realign.out)
-		coverage_bedtools_uncoll(sam_conversion.out)
+		// pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
+		// pair_assembly_pear(BAMTOFASTQ.out) | mapping_reads | sam_conversion
 
-		hsmetrics_run(ABRA2_realign.out)
-		hsmetrics_run_uncoll(sam_conversion.out)
+		// coverage_bedtools(ABRA2_realign.out)
+		// coverage_bedtools_uncoll(sam_conversion.out)
 
-		mutect2_run(ABRA2_realign.out)
-		vardict(ABRA2_realign.out)
-		varscan(ABRA2_realign.out)
+		// hsmetrics_run(ABRA2_realign.out)
+		// hsmetrics_run_uncoll(sam_conversion.out)
 
-		mutect2_run_uncoll(sam_conversion.out)
-		vardict_uncoll(sam_conversion.out)
-		varscan_uncoll(sam_conversion.out)
+		// mutect2_run(ABRA2_realign.out)
+		// vardict(ABRA2_realign.out)
+		// varscan(ABRA2_realign.out)
 
-		somaticSeq_run(coverage_bedtools.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
-		somaticSeq_run_uncoll(coverage_bedtools_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
+		// mutect2_run_uncoll(sam_conversion.out)
+		// vardict_uncoll(sam_conversion.out)
+		// varscan_uncoll(sam_conversion.out)
+
+		// somaticSeq_run(coverage_bedtools.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
+		// somaticSeq_run_uncoll(coverage_bedtools_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
 }
 
 workflow.onComplete {

@@ -1,0 +1,31 @@
+##fileformat=VCFv4.1
+##FILTER=<ID=PASS,Description="All filters passed">
+##SomaticSeq=v3.7.3__2025-04-22_12:15:57
+##FILTER=<ID=LowQual,Description="Less confident somatic mutation calls with probability value at least 0.1">
+##FILTER=<ID=REJECT,Description="Rejected as a confident somatic mutation with ONCOSCORE below 2">
+##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description="Somatic mutation in primary">
+##INFO=<ID=MVD,Number=3,Type=Integer,Description="Calling decision of the 3 algorithms: MuTect, VarScan2, VarDict">
+##INFO=<ID=NUM_TOOLS,Number=1,Type=Float,Description="Number of tools called it Somatic">
+##INFO=<ID=LC,Number=1,Type=Float,Description="Linguistic sequence complexity in Phred scale between 0 to 40. Higher value means higher complexity.">
+##INFO=<ID=AF,Number=1,Type=Float,Description="Variant Allele Fraction">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=DP4,Number=4,Type=Integer,Description="ref forward, ref reverse, alt forward, alt reverse">
+##FORMAT=<ID=CD4,Number=4,Type=Integer,Description="ref concordant, ref discordant, alt concordant, alt discordant">
+##FORMAT=<ID=refMQ,Number=1,Type=Float,Description="average mapping score for reference reads">
+##FORMAT=<ID=altMQ,Number=1,Type=Float,Description="average mapping score for alternate reads">
+##FORMAT=<ID=refBQ,Number=1,Type=Float,Description="average base quality score for reference reads">
+##FORMAT=<ID=altBQ,Number=1,Type=Float,Description="average base quality score for alternate reads">
+##FORMAT=<ID=refNM,Number=1,Type=Float,Description="average edit distance for reference reads">
+##FORMAT=<ID=altNM,Number=1,Type=Float,Description="average edit distance for alternate reads">
+##FORMAT=<ID=fetSB,Number=1,Type=Float,Description="Strand bias FET">
+##FORMAT=<ID=fetCD,Number=1,Type=Float,Description="Concordance FET">
+##FORMAT=<ID=uMQ,Number=1,Type=Float,Description="p of MannWhitneyU test of mapping quality: p close to 0 means ALT MQs are significantly less than reference MQs, and p close to 1 means ALT MQs are significantly greater than reference MQs.">
+##FORMAT=<ID=uBQ,Number=1,Type=Float,Description="p of MannWhitneyU test of base quality: p close to 0 means ALT BQs are significantly less than reference BQs, and p close to 1 means ALT BQs are significantly greater than reference BQs.">
+##FORMAT=<ID=MQ0,Number=1,Type=Integer,Description="Number of reads with mapping quality of 0">
+##FORMAT=<ID=VAF,Number=1,Type=Float,Description="Variant Allele Frequency">
+##contig=<ID=chr21>
+##bcftools_concatVersion=1.9+htslib-1.9
+##bcftools_concatCommand=concat -a -o U2AF1_02.ErrorCorrectd.vcf U2AF1_02.somaticseq/somaticseq_snv.vcf.gz U2AF1_02.somaticseq/somaticseq_indel.vcf.gz; Date=Tue Apr 22 12:19:54 2025
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	U2AF1_02
+chr21	44524456	rs371769427	G	A	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=16.1;AF=0.00607	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,1965,0,12:0,1965,0,12:60:60:45:45:0.108906:1:1:1:0.5:0.5:0:0.00607
+chr21	44524595	.	C	CA	0	LowQual	MVD=0,1,0;NUM_TOOLS=1;LC=12.6;AF=0.00405	GT:DP4:CD4:refMQ:altMQ:refBQ:altBQ:refNM:altNM:fetSB:fetCD:uMQ:uBQ:MQ0:VAF	0/0:0,1969,0,8:0,1969,0,8:60:60:45:45:0.107161:1.875:1:1:0.5:0.5:0:0.00405
