@@ -3,3 +3,5 @@ sequences/
 work/
 samplesheet.csv
 Final_Output*
+.nextflow/
+.nextflow.pid
