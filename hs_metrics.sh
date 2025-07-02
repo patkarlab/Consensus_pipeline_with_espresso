@@ -7,5 +7,5 @@ do
 	#echo -ne $i'\t'; grep -v '#' ${PWD}/Final_Output/$i/$i"_hsmetrics.txt" | awk 'BEGIN{FS="\t"; OFS="\t"}NR==2{ print $7,$8}'
 	#echo -ne ${i}'\t'; grep -v '#' ${PWD}/Final_Output_FGBIO//${i}/${i}"_hsmetrics.txt" | awk 'BEGIN{FS="\t"; OFS="\t"}NR==3{ print $7,$8}'
 	#echo -ne $i'\t'; grep -v '#' ${PWD}/Final_Output/$i/${i}"_uncoll_hsmetrics.txt" | awk 'BEGIN{FS="\t"; OFS="\t"}NR==2{ print $7,$8}'
-	echo -ne $i'\t'; grep -v '#' ${PWD}/Final_Output_FGBIO//$i/${i}"_uncoll_hsmetrics.txt" | awk 'BEGIN{FS="\t"; OFS="\t"}NR==3{ print $7,$8}'
+	echo -ne $i'\t'; grep -v '#' ${PWD}/Final_Output/$i/${i}"_uncoll_hsmetrics.txt" | awk 'BEGIN{FS="\t"; OFS="\t"}NR==3{ print $7,$8}'
 done

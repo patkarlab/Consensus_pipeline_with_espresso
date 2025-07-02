@@ -1,29 +1,54 @@
-# fgbio concensus pipeline with Espresso
+# MIPS pipeline
 
 ## Description
-This pipeline follows the fgbio pipeline to obtain mapped consensus bam file. This bam file is used as input to VarScan, the output of which is used to perform error corrected variant calling using Espresso
+This is a nextflow pipeline for analysing data for MIPS-MRD. It follows the fgbio pipeline (https://github.com/fulcrumgenomics/fgbio) to obtain mapped consensus bam file. 
 
-## 1. Demultiplexing the umi tagged sequences
-### Use the following command if index1 has a 8 base umi at the end
+For running this pipeline, following programs need to be installed and their complete paths need to be added in the params section of the `nextflow.config`.
+
+- fastqc = fastqc executable path 
+- java_path = directory containing the java executable
+- GATK38_path = path to the GenomeAnalysisTK-3.8.jar file
+- GATK42_path = path to the gatk-package-4.2.6.0-local.jar file
+- fgbio_path = ath to the fgbio-2.0.1.jar file
+- samtools = samtools executable path
+- genome = Genomic fasta file
+- site1 = known_polymorphic_sites 1 (Mills_and_1000G_gold_standard.indels)
+- PosControlScript = Custom script for generating Synthetic Fastq with 4% npm1 VAF
+- fastq_bam = Custom script for generating bam from fastq with bwa
+- abra2_path = directory containing the abra jar file
+- pear_path = pear executable path 
+- bedtools = bedtools executable path
+- mosdepth
+- picard_path = path to the picard.jar file
+- get_itd_path = path to the folder containing getitd.py
+- VarDict
+- varscan_path = path to the VarScan.v2.3.9.jar file
+- annovarLatest_path = path to the folder containing ANNOVAT perl scripts
+- bcftools_path = bcftools executable path 
+- somaticseq
+
+## Usage:
+
+1. Keep the `fastq` files into the `sequences/` folder.
+
+2. Change the `samplesheet.csv`. It should have a list of IDs of the samples. 
+
+3.  Run the following script.
+
 ```
-bcl2fastq -R 230215_M04898_0087_000000000-DJG93 -o 230215_M04898_0087_000000000-DJG93/demux_out/ --sample-sheet Samplesheet_delN_16Feb2023.csv --use-bases-mask Y145,I8,Y8,I8,Y153 --mask-short-adapter-reads 0
+./run_nextflow.sh > script.log
 ```
-Here, -R is the input (entire run) folder , -o is the output folder and --sample-sheet is the miseq format sample sheet (i2 is reverse complimented). The original samplesheet used was SampleSheetUsed.csv.  
+This script contains the nextflow command used to execute the workflow.
 
-## 2. Executing the pipeline
-The main.nf follows the fgbio pipeline mentioned here https://github.com/fulcrumgenomics/fgbio/blob/main/docs/best-practice-consensus-pipeline.md to obtain a consensus bam file. This script requires a bed file, samplesheet.csv.
-It can be run using 
 ```
-./run_nextflow.sh samplesheet.csv > script.log
+source activate new_base
+
+nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/nextflow.config run mips_mrd.nf -entry MRD \
+--bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/mips_mrd_bal210125_sortd \
+--bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/mips_mrd_bal11March_exon_sortd \
+--sequences /home/pipelines/Consensus_pipeline_with_espresso/sequences/ \
+--input /home/pipelines/Consensus_pipeline_with_espresso/samplesheet.csv \
+-resume -bg
+
+conda deactivate
 ```
-The SyntheticFastq process in main.nf uses PosControlCount.sh which adds synthetic npm1 reads.   
-The above shell script requires KRAS_wt.fastq and KRAS_rs2135805986_TG.fastq which have wild type and SNV containing sequence respectively.  
-This script counts the total no. of reads in the input bam file. The number of kras reads to be added in the fastq file are calculated such that they form 6% of the total reads in the final merged bam file. The kras insert has a final VAF of 4%.  
-The fastq_bam.sh script converts the fastq file obtained from the PosControlCount.sh to bam file. This bam file is then integrated in the sample's bam file.  
-
-
-## 3. Espresso for error corrected variant detection
-The .cns files obtained from VarScan are provided as input to Espresso.  The output from Espresso is a single vcf file for all the samples.  
-The detailed espresso workflow is present here : https://htmlpreview.github.io/?https://github.com/abelson-lab/Espresso/blob/master/vignettes/Espresso_workflow.html  
-The github repo for espresso : https://github.com/abelson-lab/Espresso  
-
