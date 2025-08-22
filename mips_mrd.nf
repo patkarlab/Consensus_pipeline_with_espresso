@@ -30,7 +30,7 @@ process trimming {
 }
 
 process fastqc{
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*'
 	input:
 		val Sample
 	output:
@@ -108,23 +108,24 @@ process mapping_reads {
 	input:
 		tuple val (Sample), file (pairAssembled)
 	output:
-		tuple val (Sample), file ("*.sam")
+		tuple val (Sample), file ("*.bam")
 	script:
 	"""
-	bwa mem -R "@RG\\tID:AML\\tPL:ILLUMINA\\tLB:LIB-MIPS\\tSM:${Sample}\\tPI:200" -M -t 20 ${params.genome} ${pairAssembled} > ${Sample}.sam
+	bwa mem -R "@RG\\tID:AML\\tPL:ILLUMINA\\tLB:LIB-MIPS\\tSM:${Sample}\\tPI:200" \
+	-M -t 20 ${params.genome} ${pairAssembled} | ${params.samtools} sort -@ 8 -o ${Sample}.bam -
 	"""
 }
 
 process sam_conversion {
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.uncollaps.bam*'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*.uncollaps.bam*'
 	input:
-		tuple val (Sample), file (samfile)	
+		tuple val (Sample), file (bamfile)	
 	output:
 		tuple val(Sample), file ("*.uncollaps.bam"), file ("*.uncollaps.bam.bai")
 	script:
 	"""
-	${params.samtools} view -bT ${params.genome} ${samfile} > ${Sample}.bam
-	${params.samtools} sort ${Sample}.bam > ${Sample}.uncollaps.bam
+	# ${params.samtools} view -bT ${params.genome} ${samfile} > ${Sample}.bam
+	${params.samtools} sort ${bamfile} > ${Sample}.uncollaps.bam
 	${params.samtools} index ${Sample}.uncollaps.bam > ${Sample}.uncollaps.bam.bai
 	"""
 }
@@ -147,7 +148,7 @@ process MapBam {
 
 process GroupReadsByUmi {
 	tag "${Sample}"
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: "${Sample}_family.png"
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: "${Sample}_family.png"
 	input:
 		tuple val (Sample), file(mapped_bam)
 	output: 
@@ -262,7 +263,7 @@ process SyntheticFastq {
 
 process ABRA2_realign {
 	tag "${Sample}"
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.bam*'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.bam*'
 	input:
 		tuple val (Sample), file (filt_bam), file (filt_bai)
 	output:
@@ -275,7 +276,7 @@ process ABRA2_realign {
 }
 
 process CNS_filegen {
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.final.cns'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*.final.cns'
 	input:
 		tuple val (Sample), file (abra_bam), file (abra_bai)
 	output:
@@ -308,15 +309,15 @@ process espresso {
 	"""
 	for i in `cat ${params.input}`
 	do
-		ln -s $PWD/Final_Output/\${i}/\${i}.final.cns ./
+		ln -s ${params.outdir}/\${i}/\${i}.final.cns ./
 	done
-	${params.umi_error_model} ${params.input} ${params.bedfile}.bed
+	${params.umi_error_model} ${params.input} ${params.bedfile}.bed ${params.outdir}
 	"""
 }
 
 process coverage_bedtools {
 	tag "${Sample}"
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions_bedtools.bed'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions_bedtools.bed'
 	input:
 		tuple val (Sample), file (abra_bam), file (abra_bai)
 	output:
@@ -329,9 +330,8 @@ process coverage_bedtools {
 	"""	
 }
 
-
 process coverage_mosdepth {
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions.bed'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions.bed'
 	input:
 		tuple val (Sample), file (abra_bam), file (abra_bai)
 	output:
@@ -345,7 +345,7 @@ process coverage_mosdepth {
 
 process coverage_bedtools_uncoll {
 	tag "${Sample}"
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_uncollaps_bedtools.bed'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_uncollaps_bedtools.bed'
 	//publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_exon_uncollaps_bedtools.bed'
 	input:
 		tuple val (Sample), file (uncollaps_bam), file (uncollaps_bam_bai)
@@ -360,7 +360,7 @@ process coverage_bedtools_uncoll {
 }
 
 process coverage_mosdepth_uncoll {
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.regions.bed'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*.regions.bed'
 	input:
 		tuple val (Sample), file (abra_bam), file (abra_bai)
 	output:
@@ -374,7 +374,7 @@ process coverage_mosdepth_uncoll {
 
 process hsmetrics_run {
 	tag "${Sample}"
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_hsmetrics.txt'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_hsmetrics.txt'
 	input:
 		tuple val(Sample), file(abra_bam), file (abra_bai)
 	output:
@@ -387,7 +387,7 @@ process hsmetrics_run {
 
 process hsmetrics_run_uncoll {
 	tag "${Sample}"
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_uncoll_hsmetrics.txt'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_uncoll_hsmetrics.txt'
 	input:
 		tuple val(Sample), file(abra_bam), file (abra_bai)
 	output:
@@ -399,7 +399,7 @@ process hsmetrics_run_uncoll {
 }
 
 process minimap_getitd {
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_getitd'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_getitd'
 	input:
 		tuple val (Sample), file(abra_bam), file (abra_bai)
 	output:
@@ -543,7 +543,7 @@ process varscan {
 }
 
 process strelka {
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.strelka*.vcf'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*.strelka*.vcf'
 	input:
 		tuple val (Sample), file(abra_bam), file (abra_bai)
 	output:
@@ -581,9 +581,9 @@ process varscan_uncoll {
 
 process somaticSeq_run {
 	tag "${Sample}"
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.vcf'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.vcf'
 	//publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.csv'
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_ErrorCorrectd.xlsx'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_ErrorCorrectd.xlsx'
 	input:
 		tuple val (Sample), file (Coverage), file (mutectVcf), file (vardictVcf), file (varscanVcf), file(finalBam), file (finalBamBai)
 	output:
@@ -623,7 +623,7 @@ process somaticSeq_run {
 process somaticSeq_run_uncoll {
 	tag "${Sample}"
 	//publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.UncollapsVariant.vcf'
-	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_uncollapsed.xlsx'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_uncollapsed.xlsx'
 	input:
 		tuple val (Sample), file (Coverage_uncollaps), file (mutectVcf), file (vardictVcf), file (varscanVcf), file(finalBam), file (finalBamBai)
 	output:
@@ -683,8 +683,6 @@ workflow MRD {
 
 		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
 
-		coverage_mosdepth(ABRA2_realign.out)
-		coverage_mosdepth_uncoll(sam_conversion.out)
 		coverage_bedtools(ABRA2_realign.out)
 		coverage_bedtools_uncoll(sam_conversion.out)
 
@@ -841,4 +839,6 @@ workflow U2AF1MRD {
 
 workflow.onComplete {
 	log.info ( workflow.success ? "\n\nDone! Output in the 'Final_Output' directory \n" : "Oops .. something went wrong" )
+	println "Completed at: ${workflow.complete}"
+	println "Total time taken: ${workflow.duration}"
 }

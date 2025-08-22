@@ -2,6 +2,7 @@
 
 samplesheet=$1
 bedfile=$2
+output_locatn=$3
 #/home/pipelines/Consensus_pipeline_with_espresso/bedfiles/Probes-XGEN_npm1_cebpa_phf6_sortd.bed
 
 #ESPRESSO
@@ -32,5 +33,5 @@ done
 ## MERGED EXCEL GENERATION
 for i in `cat ${samplesheet}`
 do
-	python3 /home/pipelines/Consensus_pipeline_with_espresso/scripts/merge-csv_v3.py $i ./ /home/pipelines/Consensus_pipeline_with_espresso/Final_Output/${i}/${i}.Espresso.xlsx
+	python3 /home/pipelines/Consensus_pipeline_with_espresso/scripts/merge-csv_v3.py $i ./ ${output_locatn}/${i}/${i}.Espresso.xlsx
 done

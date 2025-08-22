@@ -75,7 +75,7 @@ process espresso {
 	do
 		ln -s $PWD/Final_Output/\${i}/\${i}.final.cns ./
 	done
-	${params.umi_error_model} ${params.input} ${params.bedfile}.bed
+	${params.umi_error_model} ${params.input} ${params.bedfile}.bed ${params.outdir}
 	"""
 }
 

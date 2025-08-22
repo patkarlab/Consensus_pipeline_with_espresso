@@ -1,0 +1,1 @@
+/home/diagnostics/pipelines/fastq_to_bam_paired_snakemake/bin/median_bedtools.py
