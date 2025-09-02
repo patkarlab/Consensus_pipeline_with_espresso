@@ -1,7 +1,6 @@
 #!/usr/bin/nextflow
-
 // file paths
-jaas_file = file("${params.jaas_conf}", checkIfExists: true )
+genome_file = file("${params.genome}", checkIfExists: true)
 
 process TRIM {
 	tag "${Sample}"
@@ -41,20 +40,66 @@ process MARK_DUPS {
 	tag "${Sample}"
 	maxForks 5
 	label 'process_medium'
+	conda '/home/miniconda3/envs/gatk_4'
 	input:
 		tuple val(Sample), file(sortd_bam)
+		path (fasta)
 	output:
 		tuple val(Sample), file("${Sample}_markdups.bam"), file("${Sample}_marked_dup_metrics.txt")
 	script:
 	"""
-	${params.gatk} MarkDuplicatesSpark \
+	gatk --java-options "-Xmx${task.memory.toGiga()}g -XX:-UsePerfData" \
+	MarkDuplicatesSpark \
 	-I ${sortd_bam} \
 	-O ${Sample}_markdups.bam \
 	-M ${Sample}_marked_dup_metrics.txt \
 	--conf "spark.executor.cores=${task.cpus}" \
 	--conf "spark.executor.memory=${task.memory.toGiga()}g" \
+	--conf "spark.driver.memory=${task.memory.toGiga()}g" \
+	--conf "spark.network.timeout=10000000" \
+	--conf "spark.executor.heartbeatInterval=10000000" \
+	--tmp-dir .
 	"""
 }
+
+// process MARK_DUPS {
+	// tag "${Sample}"
+	// maxForks 5
+	// label 'process_medium'
+	// input:
+		// tuple val(Sample), file(sortd_bam)
+		// path (fasta)
+	// output:
+		// tuple val(Sample), file("${Sample}_markdups.bam"), file("${Sample}_marked_dup_metrics.txt")
+	// script:
+	// """
+	// #gatk ValidateSamFile -I ${sortd_bam}
+	// #gatk --java-options "-Xmx${task.memory.toGiga()}g -XX:-UsePerfData -Dlog4j.configuration=log4j-debug.properties" \\
+	// #	MarkDuplicates \\
+	// #	-I ${sortd_bam} \\
+	// #	-O ${Sample}_markdups.bam \\
+	// #	-M ${Sample}_marked_dup_metrics.txt \\
+	// #	#--reference ${fasta} \\
+	// #	-M ${Sample}_marked_dup_metrics.txt \\
+	// #	--spark-master local[${task.cpus}] \\
+	// #	--tmp-dir . 
+// 
+	// #gatk --java-options "-Xmx${task.memory.toGiga()}g -XX:-UsePerfData" \
+	// #	MarkDuplicatesSpark \
+	// #	-I ${sortd_bam} \
+	// #	-O ${Sample}_markdups.bam \
+	// #	--reference ${fasta} \
+	// #	-M ${Sample}_marked_dup_metrics.txt \
+	// #	--spark-master local[${task.cpus}] \
+	// #	--conf spark.executor.cores=${task.cpus} \
+	// #	--conf spark.executor.memory=${task.memory.toGiga()}g \
+	// #	--conf spark.driver.memory=${task.memory.toGiga()}g \
+	// #	--conf spark.network.timeout=10000000 \
+	// #	--conf "spark.executor.heartbeatInterval=10000000" \
+	// #	--conf spark.local.dir=./ \
+	// #	--tmp-dir ./ 
+	// """
+// }
 
 process BQSR {
 	tag "${Sample}"
@@ -135,7 +180,7 @@ workflow FASTQTOBAM {
 	main:
 	TRIM(samples_ch)
 	MAPBAM(TRIM.out)
-	MARK_DUPS(MAPBAM.out)
+	MARK_DUPS(MAPBAM.out, genome_file)
 	BQSR(MARK_DUPS.out)
 	APPLY_BQSR(MARK_DUPS.out.join(BQSR.out))
 	ALIGNMENT_METRICS(APPLY_BQSR.out)

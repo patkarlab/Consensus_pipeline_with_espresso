@@ -27,8 +27,15 @@ process trimming_trimmomatic {
 		tuple val (Sample), file("*1P.fq.gz"), file("*2P.fq.gz")
 	script:
 	"""
+	#trimmomatic PE \
+	#${params.sequences}/${Sample}_*R1_*.fastq.gz ${params.sequences}/${Sample}_*R3_*.fastq.gz \
+	#-baseout ${Sample}.fq.gz \
+	#ILLUMINACLIP:${params.adaptors}:2:30:10:2:keepBothReads \
+	#LEADING:3 SLIDINGWINDOW:4:15 MINLEN:40
+	#sleep 5s
+
 	trimmomatic PE \
-	${params.sequences}/${Sample}_*R1_*.fastq.gz ${params.sequences}/${Sample}_*R3_*.fastq.gz \
+	${params.sequences}/${Sample}_R1.fastq.gz ${params.sequences}/${Sample}_R2.fastq.gz \
 	-baseout ${Sample}.fq.gz \
 	ILLUMINACLIP:${params.adaptors}:2:30:10:2:keepBothReads \
 	LEADING:3 SLIDINGWINDOW:4:15 MINLEN:40
@@ -489,38 +496,38 @@ workflow MRD {
 		.set { samples_ch }
 
 	main:
-		FastqToBam(samples_ch) 
-		MapBam(FastqToBam.out) 		
-		GroupReadsByUmi(MapBam.out) 
-		CallMolecularConsensusReads(GroupReadsByUmi.out) 
-		FilterConsBam(CallMolecularConsensusReads.out) 
-		SyntheticFastq(FilterConsBam.out)
-		ABRA2_realign(SyntheticFastq.out)
-		CNS_filegen(ABRA2_realign.out)
-		espresso(CNS_filegen.out.collect())
+		//FastqToBam(samples_ch) 
+		//MapBam(FastqToBam.out) 		
+		//GroupReadsByUmi(MapBam.out) 
+		//CallMolecularConsensusReads(GroupReadsByUmi.out) 
+		//FilterConsBam(CallMolecularConsensusReads.out) 
+		//SyntheticFastq(FilterConsBam.out)
+		//ABRA2_realign(SyntheticFastq.out)
+		//CNS_filegen(ABRA2_realign.out)
+		//espresso(CNS_filegen.out.collect())
 
 		trimming_trimmomatic(samples_ch) | pair_assembly_pear | mapping_reads | sam_conversion
 
-		coverage_mosdepth(ABRA2_realign.out)
+		//coverage_mosdepth(ABRA2_realign.out)
 		coverage_mosdepth_uncoll(sam_conversion.out)
 
-		hsmetrics_run(ABRA2_realign.out)
+		//hsmetrics_run(ABRA2_realign.out)
 		hsmetrics_run_uncoll(sam_conversion.out)
-		minimap_getitd(ABRA2_realign.out)
+		//minimap_getitd(ABRA2_realign.out)
 
-		mutect2_run(ABRA2_realign.out)
-		vardict(ABRA2_realign.out)
-		//lofreq(ABRA2_realign.out)
-		varscan(ABRA2_realign.out)
-		//strelka(ABRA2_realign.out)	
+		//mutect2_run(ABRA2_realign.out)
+		//vardict(ABRA2_realign.out)
+		////lofreq(ABRA2_realign.out)
+		//varscan(ABRA2_realign.out)
+		////strelka(ABRA2_realign.out)	
 
 		mutect2_run_uncoll(sam_conversion.out)
 		vardict_uncoll(sam_conversion.out)
 		//lofreq_uncoll(MapBam.out)
 		varscan_uncoll(sam_conversion.out)
 
-		//somaticSeq_run(mutect2_run.out.join(varscan.out.join(ABRA2_realign.out)))
-		somaticSeq_run(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out))))
+		////somaticSeq_run(mutect2_run.out.join(varscan.out.join(ABRA2_realign.out)))
+		//somaticSeq_run(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out))))
 		somaticSeq_run_uncoll(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out))))
 }
 

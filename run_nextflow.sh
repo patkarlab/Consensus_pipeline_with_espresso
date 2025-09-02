@@ -15,10 +15,11 @@
 # For AML-MRD
 source activate new_base
 nextflow -c /home/pipelines/Consensus_pipeline_with_espresso/nextflow.config run scripts/main.nf -entry MRD \
---bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/AML_MRD_IDT_230_sortd \
---bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/AML_MRD_Exons_sortd \
+--bedfile /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/AML_MRD_IDT_192_withoutCEBPA_sortd \
+--bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/AML_MRD_Exons_withoutCEBPA_sortd \
 --sequences /home/pipelines/Consensus_pipeline_with_espresso/sequences/ \
 --input /home/pipelines/Consensus_pipeline_with_espresso/samplesheet.csv \
+--outdir /home/pipelines/Consensus_pipeline_with_espresso/Final_Output \
 -resume -bg
 conda deactivate 
 
@@ -49,6 +50,7 @@ conda deactivate
 #--bedfile2 /home/pipelines/Consensus_pipeline_with_espresso/bedfiles/mips_mrd_bal11March_exon_sortd \
 #--sequences /home/pipelines/Consensus_pipeline_with_espresso/sequences/ \
 #--input /home/pipelines/Consensus_pipeline_with_espresso/samplesheet.csv \
+#--outdir /home/pipelines/Consensus_pipeline_with_espresso/Final_Output \
 #-resume -bg
 #conda deactivate
 

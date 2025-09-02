@@ -20,7 +20,7 @@ process trimming {
 	"""	
 	#/home/programs/ea-utils/clipper/fastq-mcf -o ${Sample}.R1.trimmed.fastq -o ${Sample}.R2.trimmed.fastq -l 53 -k 0 -q 0 /home/diagnostics/pipelines/smMIPS_pipeline/code/functions/preprocess_reads_miseq/smmip_adaptors.fa ${params.sequences}/${Sample}_S*_R1_*.fastq.gz  ${params.sequences}/${Sample}_S*_R2_*.fastq.gz
 	trimmomatic PE \
-	${params.sequences}/${Sample}_*R1_*.fastq.gz ${params.sequences}/${Sample}_*R2_*.fastq.gz \
+	${params.sequences}/${Sample}_R1.fastq.gz ${params.sequences}/${Sample}_R2.fastq.gz \
 	-baseout ${Sample}.fq.gz \
 	ILLUMINACLIP:${params.adaptors}:2:30:10:2:keepBothReads \
 	ILLUMINACLIP:${params.nextera_adapters}:2:30:10:2:keepBothReads \
@@ -124,7 +124,6 @@ process sam_conversion {
 		tuple val(Sample), file ("*.uncollaps.bam"), file ("*.uncollaps.bam.bai")
 	script:
 	"""
-	# ${params.samtools} view -bT ${params.genome} ${samfile} > ${Sample}.bam
 	${params.samtools} sort ${bamfile} > ${Sample}.uncollaps.bam
 	${params.samtools} index ${Sample}.uncollaps.bam > ${Sample}.uncollaps.bam.bai
 	"""
@@ -157,7 +156,7 @@ process GroupReadsByUmi {
 	script:
 	"""
 	java -Xmx20g -jar ${params.fgbio_path} --compression 1 --async-io GroupReadsByUmi --input ${mapped_bam} --strategy Adjacency --edits 1 --output ${Sample}.grouped.bam --family-size-histogram ${Sample}.tag-family-sizes.txt
-	${params.plot_family_size} ${Sample}.tag-family-sizes.txt ${Sample}_family
+	plot_family_sizes.py ${Sample}.tag-family-sizes.txt ${Sample}_family
 	"""
 }
 
@@ -677,7 +676,7 @@ workflow MRD {
 		CallMolecularConsensusReads(GroupReadsByUmi.out.grouped_bam_ch) 
 		FilterConsBam(CallMolecularConsensusReads.out) 
 		SyntheticFastq(FilterConsBam.out)
-		ABRA2_realign(FilterConsBam.out)
+		ABRA2_realign(SyntheticFastq.out)
 		CNS_filegen(ABRA2_realign.out)
 		espresso(CNS_filegen.out.collect())
 

@@ -8,10 +8,12 @@ Sample list: ${params.input}
 BED file: ${params.bedfile}.bed
 Sequences in:${params.sequences}
 """
+// file paths
+bed_file = file("${params.bedfile}.bed", checkIfExists: true )
 
 include { FASTQTOBAM } from './modules/make_bam/bam'
 include { FastqToBam; MapBam; GroupReadsByUmi; CallMolecularConsensusReads } from './modules/fgbio/collapsed_bam.nf'
-include { FilterConsBam; SyntheticFastq } from './modules/fgbio/collapsed_bam.nf'
+include { COMBINEBAMS; FilterConsBam; SyntheticFastq } from './modules/fgbio/collapsed_bam.nf'
 include { ABRA2_realign } from './modules/abra/abra.nf'
 include { CNS_FILEGEN; ESPRESSO } from './modules/espresso/espresso_error.nf'
 include { COVERAGE_BEDTOOLS; COVERAGE_BEDTOOLS_UNCOLL } from './modules/bedtools/coverage.nf'
@@ -22,6 +24,7 @@ include { VARSCAN as VARSCAN_COLLAPSE; VARSCAN as VARSCAN_UNCOLLAPSE } from './m
 include { MUTECT2 as MUTECT2_COLLAPSE; MUTECT2 as MUTECT2_UNCOLLAPSE } from './modules/variant_calls/variant_call.nf'
 include { somaticSeq_run; somaticSeq_run_uncoll } from './modules/somaticseq/somaticseq.nf'
 include { ERROR_CAL } from './modules/Error_correctn/error.nf'
+include { SPLITBAM } from './modules/fgbio/collapsed_bam.nf'
 
 workflow MIPS_MRD {
 	Channel.fromPath(params.input)
@@ -48,14 +51,16 @@ workflow MIPS_MRD {
 		MUTECT2_UNCOLLAPSE(FASTQTOBAM.out.final_bams_ch)
 		somaticSeq_run_uncoll(COVERAGE_BEDTOOLS_UNCOLL.out.join(MUTECT2_UNCOLLAPSE.out.join(VARDICT_UNCOLLAPSE.out.join(VARSCAN_UNCOLLAPSE.out.join(FASTQTOBAM.out.final_bams_ch)))))
 
-		// Collapsed data analysis
+		// // Collapsed data analysis
 		FastqToBam(FASTQTOBAM.out.trim_ch)
-		MapBam(FastqToBam.out) 
-		GroupReadsByUmi(MapBam.out) 
-		CallMolecularConsensusReads(GroupReadsByUmi.out.grouped_bam_ch) 
-		FilterConsBam(CallMolecularConsensusReads.out) 
+		MapBam(FastqToBam.out)
+		SPLITBAM(MapBam.out, bed_file)
+		GroupReadsByUmi(SPLITBAM.out.chrwise_bamlist) 
+		CallMolecularConsensusReads(GroupReadsByUmi.out.grouped_bam_ch)
+		COMBINEBAMS (CallMolecularConsensusReads.out.consensus_bam_ch) 
+		FilterConsBam(COMBINEBAMS.out.combined_bam_ch) 
 		SyntheticFastq(FilterConsBam.out)
-		ABRA2_realign(FilterConsBam.out)
+		ABRA2_realign(SyntheticFastq.out)
 		CNS_FILEGEN(ABRA2_realign.out)
 		ESPRESSO(CNS_FILEGEN.out.collect())
 		COVERAGE_BEDTOOLS(ABRA2_realign.out)

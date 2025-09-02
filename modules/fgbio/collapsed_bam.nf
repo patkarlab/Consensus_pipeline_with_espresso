@@ -31,22 +31,56 @@ process MapBam {
 	"""
 }
 
+process SPLITBAM {
+	tag "${Sample}"
+	label 'process_low'
+	input:
+		tuple val (Sample), file (mapbam)
+		path (bedfile)
+	output:
+		tuple val (Sample), path ("${Sample}_*_primary.bam"), emit: chrwise_bamlist
+	script:
+	"""
+	samtools sort -@ ${task.cpus} ${mapbam} -o ${Sample}_sortd.bam 
+	samtools index ${Sample}_sortd.bam > ${Sample}_sortd.bam.bai
+	samtools idxstats ${Sample}_sortd.bam | cut -f 1 | grep -v '*' > chromosomes.txt
+	for i in `cat chromosomes.txt`
+	do 
+		#samtools view -@ ${task.cpus} -b ${Sample}_sortd.bam "\${i}" -o ${Sample}_\${i}_split.bam
+		# Obtain the read names (headers) aligned to each chromosome
+		samtools view -@ ${task.cpus} ${Sample}_sortd.bam "\${i}" | cut -f1 | sort -u > \${i}_names.txt
+		# Mate rescue: extract *all* alignments for those names
+		samtools view -@ ${task.cpus} -N \${i}_names.txt -b ${Sample}_sortd.bam > ${Sample}_\${i}_rescued.bam
+		# 3) Keep only primaries (drop secondary=256 and supplementary=2048)
+		samtools view -@ ${task.cpus} -F 2304 -b ${Sample}_\${i}_rescued.bam > ${Sample}_\${i}_primary.bam
+	done
+
+	#counter=0
+	#while read chr start stop region; do
+	#	samtools view -@ ${task.cpus} -P -b ${Sample}_sortd.bam \${chr}:\${start}-\${stop} > ${Sample}_split_\${counter}.bam
+	#	#samtools sort -@ ${task.cpus} ${Sample}_split_\${counter}.bam -o ${Sample}_split_\${counter}_sort.bam
+	#	counter=\$((\$counter + 1))
+	#done < ${bedfile}
+	"""
+}
+
 process GroupReadsByUmi {
 	tag "${Sample}"
 	maxForks 5
 	label 'process_medium'
-	conda '/home/miniconda3/envs/new_base/'
-	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: "${Sample}_family.png"
 	input:
-		tuple val (Sample), file(mapped_bam)
+		tuple val (Sample), path(mapped_bam)
 	output: 
-		tuple val (Sample), file ("*.grouped.bam"), emit : grouped_bam_ch
-		path ("${Sample}_family.png")
+		tuple val (Sample), path ("*_grouped.bam"), emit : grouped_bam_ch
 	script:
 	"""
-	java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 1 --async-io GroupReadsByUmi --input ${mapped_bam} --strategy Adjacency --edits 1 \
-	--output ${Sample}.grouped.bam --family-size-histogram ${Sample}.tag-family-sizes.txt
-	plot_family_sizes.py ${Sample}.tag-family-sizes.txt ${Sample}_family
+	for bam_file in ${mapped_bam}
+	do 
+		file_name=\$( basename \${bam_file} .bam)	# Removing the .bam extension
+		java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 1 --async-io GroupReadsByUmi --input \${bam_file} --strategy Adjacency --edits 1 \
+		--output \${file_name}_grouped.bam --family-size-histogram \${file_name}.tag-family-sizes.txt
+	done
+	# plot_family_sizes.py ${Sample}.tag-family-sizes.txt ${Sample}_family
 	"""
 }
 
@@ -55,16 +89,33 @@ process CallMolecularConsensusReads {
 	maxForks 5
 	label 'process_medium'
 	input:
-		tuple val (Sample), file (grouped_bam)
+		tuple val (Sample), path (grouped_bam)
 	output:
-		tuple val (Sample), file ("*.cons.unmapped.bam")
+		tuple val (Sample), path ("*_cons_umap.bam"), emit : consensus_bam_ch
 	script:
 	"""
 	# This step generates unmapped consensus reads from the grouped reads and immediately filters them
-	java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 0 CallMolecularConsensusReads --input ${grouped_bam} \
-	--output /dev/stdout --min-reads 4 --threads ${task.cpus} | java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 1 \
-	FilterConsensusReads --input /dev/stdin --output ${Sample}.cons.unmapped.bam --ref ${params.genome} \
-	--min-reads 4 --min-base-quality 20 --max-base-error-rate 0.25
+	for bams in ${grouped_bam}
+	do
+		outfile_name=\$( basename \${bams} .bam)	# Removing the .bam extension
+		java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 0 CallMolecularConsensusReads --input \${bams} \
+		--output /dev/stdout --min-reads 4 --threads ${task.cpus} | java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 1 \
+		FilterConsensusReads --input /dev/stdin --output \${outfile_name}_cons_umap.bam --ref ${params.genome} \
+		--min-reads 4 --min-base-quality 20 --max-base-error-rate 0.25
+	done
+	"""
+}
+
+process COMBINEBAMS {
+	tag "${Sample}"
+	label 'process_low'
+	input:
+		tuple val (Sample), path (cons_bam_list)
+	output:
+		tuple val (Sample), path ("${Sample}.bam"), emit : combined_bam_ch
+	script:
+	"""
+	samtools merge -@ ${task.cpus} ${Sample}.bam ${cons_bam_list} 
 	"""
 }
 
@@ -77,7 +128,10 @@ process FilterConsBam {
 		tuple val (Sample), file ("*.cons.filtered.bam"), file ("*.cons.filtered.bam.bai")
 	script:
 	"""
-	${params.samtools} fastq ${cons_unmapped_bam} | bwa mem -t ${task.cpus} -p -K 150000000 -Y ${params.genome} - | \
+	${params.gatk} AddOrReplaceReadGroups I=${cons_unmapped_bam} O=${Sample}_with_rg.bam \
+	RGID=AML RGLB=LIB-MIPS RGPL=ILLUMINA RGPU=UNIT_1 RGSM=${Sample}
+
+	${params.samtools} fastq ${Sample}_with_rg.bam | bwa mem -t ${task.cpus} -p -K 150000000 -Y ${params.genome} - | \
 	java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 0 --async-io ZipperBams --unmapped ${cons_unmapped_bam} \
 	--ref ${params.genome} --tags-to-reverse Consensus --tags-to-revcomp Consensus | ${params.samtools} sort --threads ${task.cpus} -o ${Sample}.cons.filtered.bam
 	${params.samtools} index ${Sample}.cons.filtered.bam > ${Sample}.cons.filtered.bam.bai
