@@ -4,8 +4,8 @@ process VARSCAN {
 	tag "${Sample}"
 	input:
 		tuple val (Sample), file(finalBam), file (finalBamBai)
-		genome_loc
-		bedfile
+		path (genome_loc)
+		path (bedfile)
 	output:
 		tuple val(Sample), file("${Sample}.varscan.vcf")
 	script:

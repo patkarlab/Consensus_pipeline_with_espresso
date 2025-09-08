@@ -5,7 +5,7 @@ process FILT3R {
 	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*filt3r_json.csv'
 	input:
 		tuple val (Sample), file (trimmed_read1), file (trimmed_read2)
-		filt3r_reference
+		path (filt3r_reference)
 	output:
 		tuple val (Sample), file("*_filt3r.vcf"), file("*_filt3r_json.csv"), file("*_filt3r_out.csv")
 	script:
@@ -33,7 +33,7 @@ process MINIMAP_GETITD {
 	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_getitd'
 	input:
 		tuple val (Sample), file (read1), file (read2)
-		minimap_getitd_reference
+		path (minimap_getitd_reference)
 	output:
 		path "${Sample}_getitd"
 	script:

@@ -4,18 +4,23 @@ process MUTECT2 {
 	tag "${Sample}"
 	maxForks 10
 	label 'process_low'
+	conda '/home/miniconda3/envs/gatk_4'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_mutect2.vcf'
 	input:
 		tuple val (Sample), file(abra_bam), file (abra_bai)
 	output:
-		tuple val (Sample), file ("${Sample}_selected.vcf")
+		tuple val (Sample), file ("${Sample}_mutect2.vcf")
 	script:
 	"""
 	#${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} Mutect2 -R ${params.genome} -I:tumor ${abra_bam} -O ${Sample}.mutect2.vcf -L ${params.bedfile}.bed -mbq 20
 	#${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} FilterMutectCalls -V ${Sample}.mutect2.vcf --stats ${Sample}.mutect2.vcf.stats -O ${Sample}_filtered.vcf -R ${params.genome} --unique-alt-read-count 3 --min-median-base-quality 20 --min-median-mapping-quality 30
 
-	${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} Mutect2 -R ${params.genome} -I:tumor ${abra_bam} -O ${Sample}.mutect2.vcf -L ${params.bedfile}.bed -mbq 20 --panel-of-normals ${params.mutect2_pon}
-	${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} FilterMutectCalls -V ${Sample}.mutect2.vcf --stats ${Sample}.mutect2.vcf.stats -O ${Sample}_filtered.vcf -R ${params.genome} --unique-alt-read-count 3 --min-median-base-quality 20 --min-median-mapping-quality 30
-	${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} SelectVariants -V ${Sample}_filtered.vcf --exclude-filtered -O ${Sample}_selected.vcf
+	#${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} Mutect2 -R ${params.genome} -I:tumor ${abra_bam} -O ${Sample}.mutect2.vcf -L ${params.bedfile}.bed -mbq 20 --panel-of-normals ${params.mutect2_pon}
+	#${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} FilterMutectCalls -V ${Sample}.mutect2.vcf --stats ${Sample}.mutect2.vcf.stats -O ${Sample}_filtered.vcf -R ${params.genome} --unique-alt-read-count 3 --min-median-base-quality 20 --min-median-mapping-quality 30
+	#${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} SelectVariants -V ${Sample}_filtered.vcf --exclude-filtered -O ${Sample}_selected.vcf
+
+	# gatk 4 
+	gatk Mutect2 -R ${params.genome} -I ${abra_bam} -O ${Sample}_mutect2.vcf -L ${params.bedfile}.bed --max-reads-per-alignment-start 0 --af-of-alleles-not-in-resource 1e-6
 	"""
 }
 
@@ -35,6 +40,7 @@ process VARDICT {
 process VARSCAN {
 	tag "${Sample}"
 	label 'process_low'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*.varscan.vcf'
 	input:
 		tuple val (Sample), file(abra_bam), file (abra_bai)
 	output:
@@ -60,5 +66,23 @@ process VARSCAN {
 	${params.bcftools_path} index -t ${Sample}.varscan_snp.vcf.gz
 	${params.bcftools_path} index -t ${Sample}.varscan_indel.vcf.gz
 	${params.bcftools_path} concat -a ${Sample}.varscan_snp.vcf.gz ${Sample}.varscan_indel.vcf.gz -o ${Sample}.varscan.vcf
+	"""
+}
+
+process DEEPSOMATIC {
+	tag "${Sample}"
+	input:
+		tuple val (Sample), file(finalBam), file (finalBamBai)
+	output:
+		tuple val(Sample), file("*${Sample}_DS.vcf")
+	script:
+	""" 
+	mkdir output
+	outpath=`realpath output`
+	bam_path=`realpath ${finalBam} | awk 'BEGIN{OFS=FS="/"} {\$NF=""; print \$0}'`
+	vcf_output=${Sample}_DS.vcf
+	control_bam_path=`realpath ${params.control_bam}`
+	echo \$bam_path \$outpath \$vcf_output ${finalBam} \${control_bam_path} ${params.genome} ${params.bedfile}.bed
+	${params.deepsomatic} \$bam_path \$outpath \$vcf_output ${finalBam} \${control_bam_path} ${params.genome} ${params.bedfile}.bed
 	"""
 }

@@ -5,7 +5,7 @@ process COVERAGE {
 	publishDir "${params.outdir}/${Sample}/", mode: 'copy'
 	input:
 		tuple val (Sample), file(finalBams), file(finalBamBai)
-		bedfile
+		path (bedfile)
 	output:
 		tuple val (Sample), file ("${Sample}.counts.bed")
 	script:

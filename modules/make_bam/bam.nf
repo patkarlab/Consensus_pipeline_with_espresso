@@ -11,7 +11,7 @@ process TRIM {
 		tuple val(Sample), file("${Sample}_trim_R1.fastq"), file("${Sample}_trim_R2.fastq")
 	script:
 	"""
-	${params.fastp} -i ${read1} -I ${read2} -o ${Sample}_trim_R1.fastq -O ${Sample}_trim_R2.fastq --adapter_fasta ${params.adaptors} -w ${task.cpus}
+	${params.fastp} -i ${read1} -I ${read2} -o ${Sample}_trim_R1.fastq -O ${Sample}_trim_R2.fastq --adapter_fasta ${params.adaptors} -w ${task.cpus} -q 20
 	trimmomatic PE -threads ${task.cpus} \
 	${read1} ${read2} \
 	-baseout ${Sample}.fq.gz \
@@ -120,22 +120,22 @@ process BQSR {
 }
 
 process APPLY_BQSR {
-	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_final.bam'
-	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_final.bam.bai'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_uncollapsed.bam'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_uncollapsed.bam.bai'
 	tag "${Sample}"
 	input:
 		tuple val(Sample), file(markdups_bam), file(markdups_metrics), file(recal_table)
 	output:
-		tuple val(Sample), file("${Sample}_final.bam"), file("${Sample}_final.bam.bai")
+		tuple val(Sample), file("${Sample}_uncollapsed.bam"), file("${Sample}_uncollapsed.bam.bai")
 	script:
 	"""
 	${params.gatk} ApplyBQSR \
 		-R ${params.genome} \
 		-I ${markdups_bam} \
 		--bqsr-recal-file ${recal_table} \
-		-O ${Sample}_final.bam
+		-O ${Sample}_uncollapsed.bam
 
-	mv ${Sample}_final.bai ${Sample}_final.bam.bai
+	mv ${Sample}_uncollapsed.bai ${Sample}_uncollapsed.bam.bai
 	"""
 }
 
@@ -179,13 +179,13 @@ workflow FASTQTOBAM {
 		samples_ch
 	main:
 	TRIM(samples_ch)
-	MAPBAM(TRIM.out)
-	MARK_DUPS(MAPBAM.out, genome_file)
-	BQSR(MARK_DUPS.out)
-	APPLY_BQSR(MARK_DUPS.out.join(BQSR.out))
-	ALIGNMENT_METRICS(APPLY_BQSR.out)
-	INSERT_SIZE_METRICS(APPLY_BQSR.out)
+	// MAPBAM(TRIM.out)
+	// MARK_DUPS(MAPBAM.out, genome_file)
+	// BQSR(MARK_DUPS.out)
+	// APPLY_BQSR(MARK_DUPS.out.join(BQSR.out))
+	// ALIGNMENT_METRICS(APPLY_BQSR.out)
+	// INSERT_SIZE_METRICS(APPLY_BQSR.out)
 	emit:
-		final_bams_ch = APPLY_BQSR.out
+		// final_bams_ch = APPLY_BQSR.out
 		trim_ch = TRIM.out
 }

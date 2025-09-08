@@ -2,7 +2,7 @@
 
 process COVERAGE_BEDTOOLS {
 	tag "${Sample}"
-	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions_bedtools.bed'
+	// publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions_bedtools.bed'
 	input:
 		tuple val (Sample), file (abra_bam), file (abra_bai)
 	output:
@@ -15,7 +15,7 @@ process COVERAGE_BEDTOOLS {
 
 process COVERAGE_BEDTOOLS_UNCOLL {
 	tag "${Sample}"
-	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_uncollaps_bedtools.bed'
+	// publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_uncollaps_bedtools.bed'
 	input:
 		tuple val (Sample), file (uncollaps_bam), file (uncollaps_bam_bai)
 	output:

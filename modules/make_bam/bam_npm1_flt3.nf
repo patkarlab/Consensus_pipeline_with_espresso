@@ -4,8 +4,8 @@ process TRIM {
 	tag "${Sample}"
 	input:
 		tuple val (Sample), file(read1), file(read2)
-		illumina_adapters
-		nextera_adapters
+		path (illumina_adapters)
+		path (nextera_adapters)
 	output:
 		tuple val (Sample), file("*1P.fq.gz"), file("*2P.fq.gz")
 	script:
@@ -25,7 +25,7 @@ process MAP {
 	label 'process_medium'
 	input:
 		tuple val (Sample), file (trimmed_read1), file (trimmed_read2)
-		genome_loc
+		path (genome_loc)
 	output:
 		tuple val(Sample), file ("*.bam"), file ("*.bam.bai")
 	script:

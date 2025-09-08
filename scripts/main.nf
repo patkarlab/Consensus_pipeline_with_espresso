@@ -202,29 +202,29 @@ process espresso {
 	"""
 }
 
-process coverage_mosdepth {
+process coverage_bedtools {
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_umi_cov.regions.bed'
 	input:
 		tuple val (Sample), file (abra_bam), file (abra_bai)
 	output:
-		tuple val (Sample), file ("*")
+		tuple val (Sample), file ("${Sample}_umi_cov.regions.bed"), file ("${Sample}_exon_umi_cov.regions.bed")
 	script:
 	"""
-	${params.mosdepth_script} ${abra_bam} ${Sample}_umi_cov ${params.bedfile}.bed
-	${params.mosdepth_script} ${abra_bam} ${Sample}_exon_umi_cov ${params.bedfile2}.bed
+	${params.bedtools} coverage -counts -a ${params.bedfile}.bed -b ${abra_bam} > ${Sample}_umi_cov.regions.bed
+	${params.bedtools} coverage -counts -a ${params.bedfile2}.bed -b ${abra_bam} > ${Sample}_exon_umi_cov.regions.bed
 	"""
 }
 
-process coverage_mosdepth_uncoll {
+process coverage_bedtools_uncoll {
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*_uncollaps.regions.bed'
 	input:
 		tuple val (Sample), file (abra_bam), file (abra_bai)
 	output:
-		tuple val (Sample), file ("*")
+		tuple val (Sample), file ("${Sample}_uncollaps.regions.bed"), file ("${Sample}_exon_uncollaps.regions.bed")
 	script:
 	"""
-	${params.mosdepth_script} ${abra_bam} ${Sample}_uncollaps ${params.bedfile}.bed
-	${params.mosdepth_script} ${abra_bam} ${Sample}_exon_uncollaps ${params.bedfile2}.bed
+	${params.bedtools} coverage -counts -a ${params.bedfile}.bed -b ${abra_bam} > ${Sample}_uncollaps.regions.bed
+	${params.bedtools} coverage -counts -a ${params.bedfile2}.bed -b ${abra_bam} > ${Sample}_exon_uncollaps.regions.bed
 	"""
 }
 
@@ -411,7 +411,7 @@ process somaticSeq_run {
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.vcf'
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.ErrorCorrectd.csv'
 	input:
-		tuple val (Sample), file (mutectVcf), file (vardictVcf), file (varscanVcf), file(finalBam), file (finalBamBai)
+		tuple val (Sample), file (mutectVcf), file (vardictVcf), file (varscanVcf), file(finalBam), file (finalBamBai), file (umi_cov), file(exon_umi_cov)
 	output:
 		tuple val (Sample), file ("*")
 	script:
@@ -441,7 +441,7 @@ process somaticSeq_run {
 	python3 ${PWD}/scripts/somaticseqoutput-format_v2_mutect2.py mutect2.somaticseq.hg19_multianno.csv mutect2_.csv 
 	python3 ${PWD}/scripts/somaticseqoutput-format_v2_varscan.py varscan.somaticseq.hg19_multianno.csv varscan_.csv
 	python3 ${PWD}/scripts/somaticseqoutput-format_v2_vardict.py vardict.somaticseq.hg19_multianno.csv vardict_.csv
-	python3 ${PWD}/scripts/final_excel.py ${Sample}_umi_collaps.xlsx mutect2_.csv varscan_.csv vardict_.csv ${PWD}/Final_Output/${Sample}/${Sample}_umi_cov.regions.bed
+	python3 ${PWD}/scripts/final_excel.py ${Sample}_umi_collaps.xlsx mutect2_.csv varscan_.csv vardict_.csv ${umi_cov}
 
 	cp ${Sample}_umi_collaps.xlsx $PWD/Final_Output/${Sample}/
 	"""
@@ -451,7 +451,7 @@ process somaticSeq_run_uncoll {
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.UncollapsVariant.vcf'
 	publishDir "$PWD/Final_Output/${Sample}/", mode: 'copy', pattern: '*.UncollapsVariant.csv'
 	input:
-		tuple val (Sample), file (mutectVcf), file (vardictVcf), file (varscanVcf), file(finalBam), file (finalBamBai)
+		tuple val (Sample), file (mutectVcf), file (vardictVcf), file (varscanVcf), file(finalBam), file (finalBamBai), file(uncollaps_regions), file(exon_uncollaps_regions)
 	output:
 		tuple val (Sample), file ("*")
 	script:
@@ -481,7 +481,7 @@ process somaticSeq_run_uncoll {
 	python3 ${PWD}/scripts/somaticseqoutput-format_v2_mutect2.py mutect2.somaticseq.hg19_multianno.csv mutect2_.csv
 	python3 ${PWD}/scripts/somaticseqoutput-format_v2_varscan.py varscan.somaticseq.hg19_multianno.csv varscan_.csv
 	python3 ${PWD}/scripts/somaticseqoutput-format_v2_vardict.py vardict.somaticseq.hg19_multianno.csv vardict_.csv
-	python3 ${PWD}/scripts/final_excel.py ${Sample}_uncollaps.xlsx mutect2_.csv varscan_.csv vardict_.csv ${PWD}/Final_Output/${Sample}/${Sample}_uncollaps.regions.bed
+	python3 ${PWD}/scripts/final_excel.py ${Sample}_uncollaps.xlsx mutect2_.csv varscan_.csv vardict_.csv ${uncollaps_regions}
 
 	cp ${Sample}_uncollaps.xlsx $PWD/Final_Output/${Sample}/
 	"""
@@ -508,8 +508,8 @@ workflow MRD {
 
 		trimming_trimmomatic(samples_ch) | pair_assembly_pear | mapping_reads | sam_conversion
 
-		//coverage_mosdepth(ABRA2_realign.out)
-		coverage_mosdepth_uncoll(sam_conversion.out)
+		//coverage_bedtools(ABRA2_realign.out)
+		coverage_bedtools_uncoll(sam_conversion.out)
 
 		//hsmetrics_run(ABRA2_realign.out)
 		hsmetrics_run_uncoll(sam_conversion.out)
@@ -527,8 +527,8 @@ workflow MRD {
 		varscan_uncoll(sam_conversion.out)
 
 		////somaticSeq_run(mutect2_run.out.join(varscan.out.join(ABRA2_realign.out)))
-		//somaticSeq_run(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out))))
-		somaticSeq_run_uncoll(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out))))
+		//somaticSeq_run(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out.join(coverage_bedtools.out)))))
+		somaticSeq_run_uncoll(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out.join(coverage_bedtools_uncoll.out)))))
 }
 
 workflow.onComplete {

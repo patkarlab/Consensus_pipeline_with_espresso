@@ -125,16 +125,18 @@ process FilterConsBam {
 	input:
 		tuple val (Sample), file (cons_unmapped_bam)
 	output:
-		tuple val (Sample), file ("*.cons.filtered.bam"), file ("*.cons.filtered.bam.bai")
+		tuple val (Sample), file ("${Sample}_filt.bam"), file ("${Sample}_filt.bam.bai")
 	script:
 	"""
 	${params.gatk} AddOrReplaceReadGroups I=${cons_unmapped_bam} O=${Sample}_with_rg.bam \
 	RGID=AML RGLB=LIB-MIPS RGPL=ILLUMINA RGPU=UNIT_1 RGSM=${Sample}
 
-	${params.samtools} fastq ${Sample}_with_rg.bam | bwa mem -t ${task.cpus} -p -K 150000000 -Y ${params.genome} - | \
+	${params.samtools} fastq ${Sample}_with_rg.bam | bwa mem -R "@RG\\tID:AML\\tPL:ILLUMINA\\tLB:LIB-MIPS\\tSM:${Sample}\\tPI:200\\tPU:UNIT_1" -t ${task.cpus} -p -K 150000000 -Y ${params.genome} - | \
 	java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 0 --async-io ZipperBams --unmapped ${cons_unmapped_bam} \
 	--ref ${params.genome} --tags-to-reverse Consensus --tags-to-revcomp Consensus | ${params.samtools} sort --threads ${task.cpus} -o ${Sample}.cons.filtered.bam
-	${params.samtools} index ${Sample}.cons.filtered.bam > ${Sample}.cons.filtered.bam.bai
+
+	${params.gatk} AddOrReplaceReadGroups I=${Sample}.cons.filtered.bam O=${Sample}_filt.bam RGID=AML RGLB=LIB-MIPS RGPU=UNIT_1 RGPL=ILLUMINA RGSM=${Sample}
+	${params.samtools} index ${Sample}_filt.bam > ${Sample}_filt.bam.bai
 	"""
 }
 
@@ -148,11 +150,17 @@ process SyntheticFastq {
 	"""
 	# Making a synthetic fastq and bam based on the number of reads in the sample bam file
 	${params.PosControlScript} ${cons_filt_bam} ${Sample}_inreads
-	${params.fastq_bam} ${Sample}_inreads		# This script will output a file named *_inreads.fxd_sorted.bam
+
+	#${params.fastq_bam} ${Sample}_inreads		# This script will output a file named *_inreads.fxd_sorted.bam
+
+	bwa mem -R "@RG\\tID:AML\\tPL:ILLUMINA\\tLB:LIB-MIPS\\tSM:${Sample}\\tPI:200\\tPU:UNIT_1" -M -t ${task.cpus} ${params.genome} ${Sample}_inreads.fastq | \
+	${params.samtools} sort -@ ${task.cpus} -o ${Sample}_inreads.fxd_sorted.bam -
+	${params.samtools} index ${Sample}_inreads.fxd_sorted.bam > ${Sample}_inreads.fxd_sorted.bam.bai
 
 	# Merging the Sample bam file with positive control bam file
 	mv ${cons_filt_bam} ${Sample}.cons.filtered_merge.bam
-	${params.samtools} merge -f ${Sample}.synreads.bam ${Sample}.cons.filtered_merge.bam ${Sample}_inreads.fxd_sorted.bam
+	${params.samtools} merge -f ${Sample}_withsynreads.bam ${Sample}.cons.filtered_merge.bam ${Sample}_inreads.fxd_sorted.bam
+	${params.gatk} AddOrReplaceReadGroups I=${Sample}_withsynreads.bam O=${Sample}.synreads.bam RGID=AML RGLB=LIB-MIPS RGPU=UNIT_1 RGPL=ILLUMINA RGSM=${Sample}
 	${params.samtools} index ${Sample}.synreads.bam > ${Sample}.synreads.bam.bai
 	"""
 }
