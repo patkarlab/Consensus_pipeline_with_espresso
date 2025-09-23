@@ -27,3 +27,14 @@ process ERROR_CAL {
 	done
 	"""
 }
+
+process ERROR_MODEL {
+	input:
+		tuple val (Sample), file(error_correctd_xl)
+	output:
+		tuple val (Sample), file()
+	script:
+	""" 
+
+	"""
+}

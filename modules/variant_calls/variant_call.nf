@@ -5,7 +5,7 @@ process MUTECT2 {
 	maxForks 10
 	label 'process_low'
 	conda '/home/miniconda3/envs/gatk_4'
-	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_mutect2.vcf'
+	// publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_mutect2.vcf'
 	input:
 		tuple val (Sample), file(abra_bam), file (abra_bai)
 	output:
@@ -40,7 +40,7 @@ process VARDICT {
 process VARSCAN {
 	tag "${Sample}"
 	label 'process_low'
-	publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*.varscan.vcf'
+	// publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*.varscan.vcf'
 	input:
 		tuple val (Sample), file(abra_bam), file (abra_bai)
 	output:
@@ -84,5 +84,43 @@ process DEEPSOMATIC {
 	control_bam_path=`realpath ${params.control_bam}`
 	echo \$bam_path \$outpath \$vcf_output ${finalBam} \${control_bam_path} ${params.genome} ${params.bedfile}.bed
 	${params.deepsomatic} \$bam_path \$outpath \$vcf_output ${finalBam} \${control_bam_path} ${params.genome} ${params.bedfile}.bed
+	"""
+}
+
+process ANNOVAR {
+	tag "${Sample}"
+	label 'process_low'
+	conda '/home/miniconda3/envs/new_base/'
+	// publishDir "${params.outdir}/${Sample}/", mode: 'copy'
+	input:
+		tuple val (Sample), file (Coverage), file (mutectVcf), file (vardictVcf), file (varscanVcf)
+	output:
+		tuple val (Sample), file ("${Sample}_ErrorCorrected.xlsx")
+	script:
+	"""
+	annovar.sh ${mutectVcf} ${varscanVcf} ${vardictVcf}
+	somaticseqoutput-format_v2_mutect2.py mutect2.somaticseq.hg19_multianno.csv mutect2_.csv 
+	somaticseqoutput-format_v2_varscan.py varscan.somaticseq.hg19_multianno.csv varscan_.csv
+	somaticseqoutput-format_v2_vardict.py vardict.somaticseq.hg19_multianno.csv vardict_.csv
+	combine_callers.py ${Sample}_ErrorCorrected.xlsx mutect2_.csv varscan_.csv vardict_.csv ${Coverage}
+	"""
+}
+
+process ANNOVAR_UNCOLLAPSE {
+	tag "${Sample}"
+	label 'process_low'
+	conda '/home/miniconda3/envs/new_base/'
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy'
+	input:
+		tuple val (Sample), file (Coverage), file (mutectVcf), file (vardictVcf), file (varscanVcf)
+	output:
+		tuple val (Sample), file ("${Sample}_uncollaps.xlsx")
+	script:
+	"""
+	annovar.sh ${mutectVcf} ${varscanVcf} ${vardictVcf}
+	somaticseqoutput-format_v2_mutect2.py mutect2.somaticseq.hg19_multianno.csv mutect2_.csv 
+	somaticseqoutput-format_v2_varscan.py varscan.somaticseq.hg19_multianno.csv varscan_.csv
+	somaticseqoutput-format_v2_vardict.py vardict.somaticseq.hg19_multianno.csv vardict_.csv
+	combine_callers.py ${Sample}_uncollaps.xlsx mutect2_.csv varscan_.csv vardict_.csv ${Coverage}
 	"""
 }

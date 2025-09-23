@@ -87,7 +87,7 @@ process GroupReadsByUmi {
 process CallMolecularConsensusReads {
 	tag "${Sample}"
 	maxForks 5
-	label 'process_medium'
+	label 'process_high'
 	input:
 		tuple val (Sample), path (grouped_bam)
 	output:
