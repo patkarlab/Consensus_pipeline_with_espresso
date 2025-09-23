@@ -5,3 +5,4 @@ samplesheet.csv
 Final_Output*
 .nextflow/
 .nextflow.pid
+*.log

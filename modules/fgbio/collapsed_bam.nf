@@ -6,10 +6,10 @@ process FastqToBam {
 	input:
 		tuple val (Sample), file(R1_trim_fastq), file(R2_trim_fastq)
 	output:
-		tuple val (Sample), file ("*.unmapped.bam")
+		tuple val (Sample), file ("${Sample}.unmapped.bam")
 	script:	
 	"""
-	java -Xmx${task.memory.toGiga()}g -jar "/home/programs/fgbio/fgbio-2.0.1.jar" --compression 1 --async-io FastqToBam \
+	java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 1 --async-io FastqToBam \
 	--input ${R1_trim_fastq} ${R2_trim_fastq} --read-structures 4M+T 4M+T \
 	--sample ${Sample} --library ${Sample} --output ${Sample}.unmapped.bam
 	"""
@@ -99,9 +99,9 @@ process CallMolecularConsensusReads {
 	do
 		outfile_name=\$( basename \${bams} .bam)	# Removing the .bam extension
 		java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 0 CallMolecularConsensusReads --input \${bams} \
-		--output /dev/stdout --min-reads 4 --threads ${task.cpus} | java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 1 \
+		--output /dev/stdout --min-reads 3 --threads ${task.cpus} | java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 1 \
 		FilterConsensusReads --input /dev/stdin --output \${outfile_name}_cons_umap.bam --ref ${params.genome} \
-		--min-reads 4 --min-base-quality 20 --max-base-error-rate 0.25
+		--min-reads 3 --min-base-quality 45 --max-base-error-rate 0.2
 	done
 	"""
 }

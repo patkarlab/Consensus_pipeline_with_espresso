@@ -31,10 +31,11 @@ process ERROR_CAL {
 process ERROR_MODEL {
 	input:
 		tuple val (Sample), file(error_correctd_xl)
+		path(matrix)
 	output:
-		tuple val (Sample), file()
+		tuple val (Sample), file("${Sample}_ErrorCorrectd.xlsx")
 	script:
 	""" 
-
+	./calculate_beta_P_values_vcf.py --matrix_file ${matrix} --input_excel_file ${error_correctd_xl} --output_excel_file ${Sample}_ErrorCorrectd.xlsx
 	"""
 }

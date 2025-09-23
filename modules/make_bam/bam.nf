@@ -179,13 +179,13 @@ workflow FASTQTOBAM {
 		samples_ch
 	main:
 	TRIM(samples_ch)
-	MAPBAM(TRIM.out)
-	MARK_DUPS(MAPBAM.out, genome_file)
-	BQSR(MARK_DUPS.out)
-	APPLY_BQSR(MARK_DUPS.out.join(BQSR.out))
-	ALIGNMENT_METRICS(APPLY_BQSR.out)
-	INSERT_SIZE_METRICS(APPLY_BQSR.out)
+	// MAPBAM(TRIM.out)
+	// MARK_DUPS(MAPBAM.out, genome_file)
+	// BQSR(MARK_DUPS.out)
+	// APPLY_BQSR(MARK_DUPS.out.join(BQSR.out))
+	// ALIGNMENT_METRICS(APPLY_BQSR.out)
+	// INSERT_SIZE_METRICS(APPLY_BQSR.out)
 	emit:
-		final_bams_ch = APPLY_BQSR.out
+		// final_bams_ch = APPLY_BQSR.out
 		trim_ch = TRIM.out
 }
