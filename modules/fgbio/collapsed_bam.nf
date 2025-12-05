@@ -54,13 +54,6 @@ process SPLITBAM {
 		# 3) Keep only primaries (drop secondary=256 and supplementary=2048)
 		samtools view -@ ${task.cpus} -F 2304 -b ${Sample}_\${i}_rescued.bam > ${Sample}_\${i}_primary.bam
 	done
-
-	#counter=0
-	#while read chr start stop region; do
-	#	samtools view -@ ${task.cpus} -P -b ${Sample}_sortd.bam \${chr}:\${start}-\${stop} > ${Sample}_split_\${counter}.bam
-	#	#samtools sort -@ ${task.cpus} ${Sample}_split_\${counter}.bam -o ${Sample}_split_\${counter}_sort.bam
-	#	counter=\$((\$counter + 1))
-	#done < ${bedfile}
 	"""
 }
 
@@ -68,6 +61,7 @@ process GroupReadsByUmi {
 	tag "${Sample}"
 	maxForks 5
 	label 'process_medium'
+	// publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_grouped.bam'
 	input:
 		tuple val (Sample), path(mapped_bam)
 	output: 
@@ -99,9 +93,9 @@ process CallMolecularConsensusReads {
 	do
 		outfile_name=\$( basename \${bams} .bam)	# Removing the .bam extension
 		java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 0 CallMolecularConsensusReads --input \${bams} \
-		--output /dev/stdout --min-reads 3 --threads ${task.cpus} | java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 1 \
+		--output /dev/stdout --min-reads 2 --min-input-base-quality=20 --error-rate-post-umi=30 --threads ${task.cpus} | java -Xmx${task.memory.toGiga()}g -jar ${params.fgbio_path} --compression 1 \
 		FilterConsensusReads --input /dev/stdin --output \${outfile_name}_cons_umap.bam --ref ${params.genome} \
-		--min-reads 3 --min-base-quality 45 --max-base-error-rate 0.2
+		--min-reads 2 --min-base-quality 20
 	done
 	"""
 }

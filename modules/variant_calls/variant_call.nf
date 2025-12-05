@@ -3,7 +3,7 @@
 process MUTECT2 {
 	tag "${Sample}"
 	maxForks 10
-	label 'process_low'
+	label 'process_medium'
 	conda '/home/miniconda3/envs/gatk_4'
 	// publishDir "${params.outdir}/${Sample}/", mode: 'copy', pattern: '*_mutect2.vcf'
 	input:
@@ -20,7 +20,7 @@ process MUTECT2 {
 	#${params.java_path}/java -Xmx80G -jar ${params.GATK42_path} SelectVariants -V ${Sample}_filtered.vcf --exclude-filtered -O ${Sample}_selected.vcf
 
 	# gatk 4 
-	gatk Mutect2 -R ${params.genome} -I ${abra_bam} -O ${Sample}_mutect2.vcf -L ${params.bedfile}.bed --max-reads-per-alignment-start 0 --af-of-alleles-not-in-resource 1e-6
+	gatk --java-options "-Xmx${task.memory.toGiga()}g" Mutect2 -R ${params.genome} -I ${abra_bam} -O ${Sample}_mutect2.vcf -L ${params.bedfile}.bed --max-reads-per-alignment-start 0 --af-of-alleles-not-in-resource 1e-6 --native-pair-hmm-threads ${task.cpus}
 	"""
 }
 

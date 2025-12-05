@@ -1,23 +1,19 @@
 #!/usr/bin/nextflow
 // file paths
 genome_file = file("${params.genome}", checkIfExists: true)
+adaptors_file = file("${params.adaptors}", checkIfExists:true)
 
 process TRIM {
 	tag "${Sample}"
 	label 'process_low'
 	input:
 		tuple val(Sample), file(read1), file(read2)
+		path(Adapt)
 	output:
 		tuple val(Sample), file("${Sample}_trim_R1.fastq"), file("${Sample}_trim_R2.fastq")
 	script:
 	"""
-	${params.fastp} -i ${read1} -I ${read2} -o ${Sample}_trim_R1.fastq -O ${Sample}_trim_R2.fastq --adapter_fasta ${params.adaptors} -w ${task.cpus} -q 20
-	trimmomatic PE -threads ${task.cpus} \
-	${read1} ${read2} \
-	-baseout ${Sample}.fq.gz \
-	ILLUMINACLIP:${params.adaptors}:2:30:10:2:keepBothReads \
-	ILLUMINACLIP:${params.nextera_adapters}:2:30:10:2:keepBothReads \
-	LEADING:3 SLIDINGWINDOW:4:15 MINLEN:40
+	${params.fastp} -i ${read1} -I ${read2} -o ${Sample}_trim_R1.fastq -O ${Sample}_trim_R2.fastq --adapter_fasta ${Adapt} -w ${task.cpus} -q 20
 	"""
 }
 
@@ -33,6 +29,20 @@ process MAPBAM {
 	"""
 	bwa mem -R "@RG\\tID:AML\\tPL:ILLUMINA\\tLB:LIB-MIPS\\tSM:${Sample}\\tPI:200" \
 	-M -t ${task.cpus} ${params.genome} ${trim1} ${trim2} | ${params.samtools} sort -@ ${task.cpus} -o ${Sample}.bam -
+	"""
+}
+
+process INDEX {
+	tag "${Sample}"
+	maxForks 5
+	label 'process_low'
+	input:
+		tuple val(Sample), file(BamFile)
+	output:
+		tuple val(Sample), file ("${Sample}.bam"), file ("${Sample}.bam.bai")
+	script:
+	"""
+	samtools index ${BamFile} > ${Sample}.bam.bai
 	"""
 }
 
@@ -61,45 +71,6 @@ process MARK_DUPS {
 	--tmp-dir .
 	"""
 }
-
-// process MARK_DUPS {
-	// tag "${Sample}"
-	// maxForks 5
-	// label 'process_medium'
-	// input:
-		// tuple val(Sample), file(sortd_bam)
-		// path (fasta)
-	// output:
-		// tuple val(Sample), file("${Sample}_markdups.bam"), file("${Sample}_marked_dup_metrics.txt")
-	// script:
-	// """
-	// #gatk ValidateSamFile -I ${sortd_bam}
-	// #gatk --java-options "-Xmx${task.memory.toGiga()}g -XX:-UsePerfData -Dlog4j.configuration=log4j-debug.properties" \\
-	// #	MarkDuplicates \\
-	// #	-I ${sortd_bam} \\
-	// #	-O ${Sample}_markdups.bam \\
-	// #	-M ${Sample}_marked_dup_metrics.txt \\
-	// #	#--reference ${fasta} \\
-	// #	-M ${Sample}_marked_dup_metrics.txt \\
-	// #	--spark-master local[${task.cpus}] \\
-	// #	--tmp-dir . 
-// 
-	// #gatk --java-options "-Xmx${task.memory.toGiga()}g -XX:-UsePerfData" \
-	// #	MarkDuplicatesSpark \
-	// #	-I ${sortd_bam} \
-	// #	-O ${Sample}_markdups.bam \
-	// #	--reference ${fasta} \
-	// #	-M ${Sample}_marked_dup_metrics.txt \
-	// #	--spark-master local[${task.cpus}] \
-	// #	--conf spark.executor.cores=${task.cpus} \
-	// #	--conf spark.executor.memory=${task.memory.toGiga()}g \
-	// #	--conf spark.driver.memory=${task.memory.toGiga()}g \
-	// #	--conf spark.network.timeout=10000000 \
-	// #	--conf "spark.executor.heartbeatInterval=10000000" \
-	// #	--conf spark.local.dir=./ \
-	// #	--tmp-dir ./ 
-	// """
-// }
 
 process BQSR {
 	tag "${Sample}"
@@ -178,14 +149,15 @@ workflow FASTQTOBAM {
 	take:
 		samples_ch
 	main:
-	TRIM(samples_ch)
-	// MAPBAM(TRIM.out)
-	// MARK_DUPS(MAPBAM.out, genome_file)
-	// BQSR(MARK_DUPS.out)
-	// APPLY_BQSR(MARK_DUPS.out.join(BQSR.out))
-	// ALIGNMENT_METRICS(APPLY_BQSR.out)
-	// INSERT_SIZE_METRICS(APPLY_BQSR.out)
+		TRIM(samples_ch, adaptors_file)
+		MAPBAM(TRIM.out)
+		INDEX(MAPBAM.out)
+		// MARK_DUPS(MAPBAM.out, genome_file)
+		// BQSR(MARK_DUPS.out)
+		// APPLY_BQSR(MARK_DUPS.out.join(BQSR.out))
+		ALIGNMENT_METRICS(INDEX.out)
+		INSERT_SIZE_METRICS(INDEX.out)
 	emit:
-		// final_bams_ch = APPLY_BQSR.out
+		final_bams_ch = INDEX.out
 		trim_ch = TRIM.out
 }

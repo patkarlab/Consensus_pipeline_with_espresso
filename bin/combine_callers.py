@@ -77,6 +77,6 @@ final_df = pd.DataFrame(rows)
 
 with pd.ExcelWriter(outfile) as writer:
     final_df.to_excel(writer, sheet_name="Variants", index=False)
-    coverage.to_excel(writer, sheet_name="Coverage", index=False, header=False)
+    coverage.to_excel(writer, sheet_name="Coverage", index=False)
 
 print(f"Saved merged file: {outfile}")

@@ -29,6 +29,8 @@ process ERROR_CAL {
 }
 
 process ERROR_MODEL {
+	tag "${Sample}"
+	publishDir "${params.outdir}/${Sample}/", mode: 'copy'
 	input:
 		tuple val (Sample), file(error_correctd_xl)
 		path(matrix)
@@ -36,6 +38,6 @@ process ERROR_MODEL {
 		tuple val (Sample), file("${Sample}_ErrorCorrectd.xlsx")
 	script:
 	""" 
-	./calculate_beta_P_values_vcf.py --matrix_file ${matrix} --input_excel_file ${error_correctd_xl} --output_excel_file ${Sample}_ErrorCorrectd.xlsx
+	calculate_beta_P_values_vcf.py --matrix_file ${matrix} --input_excel_file ${error_correctd_xl} --output_excel_file ${Sample}_ErrorCorrectd.xlsx
 	"""
 }
