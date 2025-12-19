@@ -20,7 +20,7 @@ process trimming {
 	"""	
 	#/home/programs/ea-utils/clipper/fastq-mcf -o ${Sample}.R1.trimmed.fastq -o ${Sample}.R2.trimmed.fastq -l 53 -k 0 -q 0 /home/diagnostics/pipelines/smMIPS_pipeline/code/functions/preprocess_reads_miseq/smmip_adaptors.fa ${params.sequences}/${Sample}_S*_R1_*.fastq.gz  ${params.sequences}/${Sample}_S*_R2_*.fastq.gz
 	trimmomatic PE \
-	${params.sequences}/${Sample}_R1.fastq.gz ${params.sequences}/${Sample}_R2.fastq.gz \
+	${params.sequences}/${Sample}_*R1*.fastq.gz ${params.sequences}/${Sample}_*R2*.fastq.gz \
 	-baseout ${Sample}.fq.gz \
 	ILLUMINACLIP:${params.adaptors}:2:30:10:2:keepBothReads \
 	ILLUMINACLIP:${params.nextera_adapters}:2:30:10:2:keepBothReads \
@@ -727,12 +727,12 @@ workflow NARASIMHA_MRD {
 
 		pair_assembly_pear(trimming.out) | mapping_reads | sam_conversion
 
-		coverage_mosdepth(ABRA2_realign.out)
-		coverage_mosdepth_uncoll(sam_conversion.out)
+		coverage_bedtools(ABRA2_realign.out)
+		coverage_bedtools_uncoll(sam_conversion.out)
 
 		hsmetrics_run(ABRA2_realign.out)
 		hsmetrics_run_uncoll(sam_conversion.out)
-		minimap_getitd(sam_conversion.out)
+		//minimap_getitd(sam_conversion.out)
 
 		mutect2_run(ABRA2_realign.out)
 		vardict(ABRA2_realign.out)
@@ -745,8 +745,8 @@ workflow NARASIMHA_MRD {
 		//lofreq_uncoll(MapBam.out)
 		varscan_uncoll(sam_conversion.out)
 
-		somaticSeq_run(coverage_mosdepth.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
-		somaticSeq_run_uncoll(coverage_mosdepth_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
+		somaticSeq_run(coverage_bedtools.out.join(mutect2_run.out.join(vardict.out.join(varscan.out.join(ABRA2_realign.out)))))
+		somaticSeq_run_uncoll(coverage_bedtools_uncoll.out.join(mutect2_run_uncoll.out.join(vardict_uncoll.out.join(varscan_uncoll.out.join(sam_conversion.out)))))
 }
 
 workflow NARASIMHA_MRD_VALIDATION {
@@ -841,3 +841,4 @@ workflow.onComplete {
 	println "Completed at: ${workflow.complete}"
 	println "Total time taken: ${workflow.duration}"
 }
+
