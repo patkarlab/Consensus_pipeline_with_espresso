@@ -53,8 +53,7 @@ def MRD_conditions(updated_df, background_error, background_std_dev):
 	return updated_df
 
 def BackgroundRate(args):
-	infile = args.input_uncollapsed_excel
-	collapsed_infile = args.input_collapsed_excel
+	infile = args.input_collapsed_excel
 	outfile = args.output_excel
 	sheet_to_modify = 'Variants'
 	median_VAF = "VAF%_median"
@@ -67,7 +66,6 @@ def BackgroundRate(args):
 	vartype = "variant_type"
 
 	df = pd.read_excel(infile, sheet_name=None)
-	collapsed_df = pd.read_excel(collapsed_infile, sheet_name=None)
 	merged_df = df[sheet_to_modify].copy()	# Making a copy of the original sheet
 	merged_df[median_VAF] = int(-1)
 	merged_df[median_REF] = int(-1)
@@ -87,7 +85,7 @@ def BackgroundRate(args):
 		merged_df.loc[index, median_ALT] = median_cal(alt_vals)
 		median_vaf = median_cal(vaf_vals)
 		merged_df.loc[index, median_VAF] = median_vaf
-	merged_df = merged_df[ df[sheet_to_modify].columns.to_list() + [median_REF,median_ALT, median_VAF]]
+	# merged_df = merged_df[ df[sheet_to_modify].columns.to_list() + [median_REF,median_ALT, median_VAF, background_column]]
 	# Sorting the dataframe based on VAF values at positions to obtain the LVAF
 	merged_df.sort_values(by=['Chr', 'Start', median_VAF ], inplace=True, ascending=[True, True, False])
 
@@ -154,19 +152,17 @@ def BackgroundRate(args):
 	background_std_dev = statistics.stdev(subset_lvafs)
 
 	modified_df = MRD_conditions(merged_df, background_error_rate, background_std_dev)
-	key_columns = collapsed_df[sheet_to_modify].columns.to_list()[0:5]
-	# unique_cols = (modified_df.columns.difference(collapsed_df[sheet_to_modify].columns)).to_list()	# columns present only in modified_df
 	unique_cols = [background_column, mrd_status]
-	modified_df = pd.merge( collapsed_df[sheet_to_modify], modified_df[key_columns + unique_cols], how='left', on=key_columns)
+	modified_df = modified_df[ df[sheet_to_modify].columns.to_list() + unique_cols ]
+
 	with pd.ExcelWriter(outfile , engine="openpyxl", mode="w") as writer:
 		modified_df.to_excel(writer, sheet_name=sheet_to_modify, index=False)
-		for sheet_name, df in collapsed_df.items():
+		for sheet_name, df in df.items():
 			if sheet_name != sheet_to_modify:	# Not printing the original sheet
-				modified_df.to_excel(writer, sheet_name=sheet_name, index=False)
+				df.to_excel(writer, sheet_name=sheet_name, index=False)
 
 def parse_arguments():
 	parser = argparse.ArgumentParser(description="Calculation of background error")
-	parser.add_argument('--input_uncollapsed_excel', help='output of combine_callers.py for uncollapsed bam')	# 
 	parser.add_argument('--input_collapsed_excel', help='output of combine_callers.py for collapsed bam')		# 
 	parser.add_argument('--output_excel', help='same format as input')					# 
 	return parser.parse_args()
