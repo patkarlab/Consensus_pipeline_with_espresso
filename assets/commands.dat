@@ -1,0 +1,29 @@
+# Step 1 Sorting the vcf file
+for i in `cat bnc_list_trim.dat` ; do  grep '^#' ${i}/${i}_combine_all_vcfs_condensed.vcf.point > ${i}/${i}_sorted.point; grep -v '^#' ${i}/${i}_combine_all_vcfs_condensed.vcf.point | sort -k1,1V -k2,2n >> ${i}/${i}_sorted.point; done
+
+# Step 2
+#Removing the variants with VAF > 0.2
+for i in `cat bnc_list_trim.dat` ; do /home/pipelines/Consensus_pipeline_with_espresso/assets/remove_variants_gtr_20.pl ${i}/${i}_sorted.point > ${i}/${i}.real_removed; done
+
+# Step 3 
+for i in `cat bnc_list_trim.dat` ; do /home/pipelines/Consensus_pipeline_with_espresso/assets/print_multiple_variants_at_same_location.pl ${i}/${i}.real_removed > ${i}/${i}_errors_combined.real_removed ; done
+
+# Step 4
+#for i in `cat bnc_list_trim.dat` ; do /home/pipelines/Consensus_pipeline_with_espresso/assets/fill_empty_mips.pl /home/pipelines/Consensus_pipeline_with_espresso/SalipanteErrorModel/mips_mrd_bal210125_nooverlap.txt ${i}/${i}_errors_combined.real_removed ; done
+
+for i in `cat bnc_list_trim.dat` ; do /home/pipelines/Consensus_pipeline_with_espresso/assets/fill_empty_mips.py --bedfile /home/pipelines/Consensus_pipeline_with_espresso/SalipanteErrorModel/mips_mrd_bal210125_nooverlap.txt --input_file ${i}/${i}_errors_combined.real_removed ; done
+
+# Step 5
+./assets/beta_distribution.py --samples *.filled --output temp.matrix
+
+# Filtering variants present in a given number of BNC vcf files 
+# A .txt file is generated which contains variants and their repetition count
+
+# SNPs
+./bin/extract_duplicates.py --samples *.vcf.point --output snps_cutoff3.txt --fraction_cutoff 0.1
+
+# INDELs
+./bin/extract_duplicates.py --samples *.vcf.indel --fraction_cutoff 0.1 --output indels_cutoff3.txt
+
+# The above *cutoff3.txt is used in the FORMAT_ANNOVAR step 
+# filter_variants.py --input_file ${Sample}.csv --variant_list snps_cutoff3.txt/indels_cutoff3.txt --output ${Sample}_${vartype}.csv

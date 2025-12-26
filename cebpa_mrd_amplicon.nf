@@ -1,0 +1,92 @@
+#!/usr/bin/env nextflow
+nextflow.enable.dsl=2
+
+
+genome_file = file("${params.genome}", checkIfExists: true)
+index_files = file("${params.genome_dir}/${params.ind_files}.*")
+bedfile = file("${params.bedfile}.bed", checkIfExists: true)
+interval_list = file("${params.bedfile}.interval_list", checkIfExists: true)
+truseq_adapters = file("${params.adaptors}", checkIfExists: true)
+nextera_adapters = file("${params.nextera_adapters}", checkIfExists: true)
+collapsed = params.collapsed
+uncollapsed = params.uncollapsed
+mutect2 = params.mutect2
+vardict = params.vardict
+varscan = params.varscan
+
+include { DICT_GEN; TRIM; ADD_UMI; MAPBAM; MAPBAM_CONS; SORT_INDEX; SORT_INDEX_CONS; GROUPREADSBYUMI; ADDGROUPS; CALLMOLCONSREADS; FILTERCONSBAM; ZIPPERBAM;
+		COVERAGE as COVERAGE_COLL; COVERAGE as COVERAGE_UNCOLL;
+		MUTECT2 as MUTECT2_COLL; MUTECT2 as MUTECT2_UNCOLL; 
+		VARDICT as VARDICT_COLL; VARDICT as VARDICT_UNCOLL;
+		MPILEUP as MPILEUP_COLL; MPILEUP as MPILEUP_UNCOLL;
+		VARSCAN as VARSCAN_COLL; VARSCAN as VARSCAN_UNCOLL;
+		ANNOVAR as ANNOVAR_COLL_MUTECT2; ANNOVAR as ANNOVAR_COLL_VARDICT; ANNOVAR as ANNOVAR_COLL_VARSCAN; 
+		ANNOVAR as ANNOVAR_UNCOLL_MUTECT2; ANNOVAR as ANNOVAR_UNCOLL_VARDICT; ANNOVAR as ANNOVAR_UNCOLL_VARSCAN;
+		COMBINE_CALLERS as COMBINE_CALLERS_COLL; COMBINE_CALLERS as COMBINE_CALLERS_UNCOLL; ERROR_CORRECTN } from './modules/cebpa_amplicon/main.nf'
+
+
+workflow CEBPA_MRD {
+	Channel.fromPath(params.input)
+		.splitCsv(header:false)
+		.map { row ->
+			def sample = row[0].trim()
+			def r1 = file("${params.sequences}/${sample}_S*_R1_*.fastq.gz", checkIfExists: false)
+			def r2 = file("${params.sequences}/${sample}_S*_R2_*.fastq.gz", checkIfExists: false)
+
+			if (!r1 && !r2) {
+				r1 = file("${params.sequences}/${sample}*_R1.fastq.gz", checkIfExists: false)
+				r2 = file("${params.sequences}/${sample}*_R2.fastq.gz", checkIfExists: false)
+			}
+			tuple(sample, r1, r2)
+		}
+		.set { samples_ch }
+
+	main:
+
+		DICT_GEN(genome_file)
+		TRIM(samples_ch, truseq_adapters, nextera_adapters)
+		ADD_UMI(TRIM.out) 
+		MAPBAM(ADD_UMI.out, genome_file, index_files)
+		ZIPPERBAM(MAPBAM.out, genome_file, index_files)
+		SORT_INDEX(ZIPPERBAM.out)
+		GROUPREADSBYUMI(SORT_INDEX.out) 
+		CALLMOLCONSREADS(GROUPREADSBYUMI.out.grouped_bam_ch, genome_file, index_files)
+		MAPBAM_CONS(CALLMOLCONSREADS.out, genome_file, index_files)
+		FILTERCONSBAM(MAPBAM_CONS.out, genome_file, index_files)
+		ADDGROUPS(FILTERCONSBAM.out)
+		SORT_INDEX_CONS(ADDGROUPS.out)
+
+		COVERAGE_COLL(SORT_INDEX_CONS.out, bedfile, collapsed)
+		COVERAGE_UNCOLL(SORT_INDEX.out, bedfile, uncollapsed)
+
+		MUTECT2_COLL(SORT_INDEX_CONS.out, bedfile, genome_file, DICT_GEN.out, index_files, collapsed)
+		MUTECT2_UNCOLL(SORT_INDEX.out, bedfile, genome_file, DICT_GEN.out, index_files, uncollapsed)
+
+		VARDICT_COLL(SORT_INDEX_CONS.out, bedfile, genome_file, DICT_GEN.out, index_files, collapsed)
+		VARDICT_UNCOLL(SORT_INDEX.out, bedfile, genome_file, DICT_GEN.out, index_files, uncollapsed)
+
+		MPILEUP_COLL(SORT_INDEX_CONS.out, bedfile, genome_file, DICT_GEN.out, index_files, collapsed)
+		VARSCAN_COLL(SORT_INDEX_CONS.out.join(MPILEUP_COLL.out), bedfile, genome_file, DICT_GEN.out, index_files, collapsed)
+		MPILEUP_UNCOLL(SORT_INDEX.out, bedfile, genome_file, DICT_GEN.out, index_files, uncollapsed)
+		VARSCAN_UNCOLL(SORT_INDEX.out.join(MPILEUP_UNCOLL.out), bedfile, genome_file, DICT_GEN.out, index_files, uncollapsed)
+
+		ANNOVAR_COLL_MUTECT2(MUTECT2_COLL.out, mutect2)
+		ANNOVAR_COLL_VARDICT(VARDICT_COLL.out, vardict)
+		ANNOVAR_COLL_VARSCAN(VARSCAN_COLL.out, varscan)
+
+		ANNOVAR_UNCOLL_MUTECT2(MUTECT2_UNCOLL.out, mutect2)
+		ANNOVAR_UNCOLL_VARDICT(VARDICT_UNCOLL.out, vardict)
+		ANNOVAR_UNCOLL_VARSCAN(VARSCAN_UNCOLL.out, varscan)
+
+		COMBINE_CALLERS_COLL(ANNOVAR_COLL_MUTECT2.out.join(ANNOVAR_COLL_VARDICT.out.join(ANNOVAR_COLL_VARSCAN.out.join(COVERAGE_COLL.out))), collapsed)
+		COMBINE_CALLERS_UNCOLL(ANNOVAR_UNCOLL_MUTECT2.out.join(ANNOVAR_UNCOLL_VARDICT.out.join(ANNOVAR_UNCOLL_VARSCAN.out.join(COVERAGE_UNCOLL.out))), uncollapsed)
+
+		ERROR_CORRECTN(COMBINE_CALLERS_UNCOLL.out.join(COMBINE_CALLERS_COLL.out))
+		
+}
+
+workflow.onComplete {
+	log.info ( workflow.success ? "\n\nDone! Output in the 'Final_Output' directory \n" : "Oops .. something went wrong" )
+	println "Completed at: ${workflow.complete}"
+	println "Total time taken: ${workflow.duration}"
+}
